@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Image, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/AppIcon';
@@ -18,6 +18,8 @@ export const DriverDashboardScreen: React.FC = () => {
   const { horizontalPadding, scaleFont } = useResponsive();
   const [gps, setGps] = useState<GpsStatusSnapshot>(gpsService.getSnapshot());
   const [rideStarted, setRideStarted] = useState(false);
+  const [pickupAddress, setPickupAddress] = useState('');
+  const [destinationAddress, setDestinationAddress] = useState('');
   const [busy, setBusy] = useState(false);
   const statusScale = useRef(new Animated.Value(1)).current;
 
@@ -62,7 +64,11 @@ export const DriverDashboardScreen: React.FC = () => {
         return;
       }
 
-      await api.post('/rides/start', currentCoords);
+      await api.post('/rides/start', {
+        ...currentCoords,
+        pickupAddress: pickupAddress.trim() || 'Current GPS Location',
+        destinationAddress: destinationAddress.trim() || undefined,
+      });
       await gpsService.startRideTracking(user.id);
       setRideStarted(true);
       pulseStatus();
@@ -192,23 +198,47 @@ export const DriverDashboardScreen: React.FC = () => {
         ) : null}
 
         {!rideStarted ? (
-          <TouchableOpacity
-            activeOpacity={0.85}
-            disabled={busy}
-            onPress={handleStartRide}
-            style={styles.primaryBlackBtn}
-          >
-            <Text style={styles.primaryBtnText}>{busy ? 'Starting Ride...' : 'START RIDE'}</Text>
-          </TouchableOpacity>
+          <View style={styles.routeInputGroup}>
+            <TextInput
+              value={pickupAddress}
+              onChangeText={setPickupAddress}
+              placeholder="From (default: Current GPS)"
+              placeholderTextColor={Theme.colors.textSecondary}
+              style={styles.routeInput}
+            />
+            <TextInput
+              value={destinationAddress}
+              onChangeText={setDestinationAddress}
+              placeholder="To (e.g. Pune Airport / Office)"
+              placeholderTextColor={Theme.colors.textSecondary}
+              style={styles.routeInput}
+            />
+            <TouchableOpacity
+              activeOpacity={0.85}
+              disabled={busy}
+              onPress={handleStartRide}
+              style={styles.primaryBlackBtn}
+            >
+              <Text style={styles.primaryBtnText}>{busy ? 'Starting Ride...' : 'START RIDE'}</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
-          <TouchableOpacity
-            activeOpacity={0.85}
-            disabled={busy}
-            onPress={handleEndRide}
-            style={styles.endRideBtn}
-          >
-            <Text style={styles.primaryBtnText}>{busy ? 'Ending Ride...' : 'END RIDE'}</Text>
-          </TouchableOpacity>
+          <View style={styles.routeInputGroup}>
+            {destinationAddress.trim() || pickupAddress.trim() ? (
+              <Text style={styles.routeSummaryText}>
+                {(pickupAddress.trim() || 'Current GPS') +
+                  (destinationAddress.trim() ? ` → ${destinationAddress.trim()}` : '')}
+              </Text>
+            ) : null}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              disabled={busy}
+              onPress={handleEndRide}
+              style={styles.endRideBtn}
+            >
+              <Text style={styles.primaryBtnText}>{busy ? 'Ending Ride...' : 'END RIDE'}</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </FloatingBottomSheet>
     </View>
@@ -272,6 +302,18 @@ const styles = StyleSheet.create({
   warnText: { fontSize: 13, fontWeight: '700', color: Theme.colors.error, marginBottom: 8 },
   syncRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
   syncText: { fontSize: 12, color: Theme.colors.textSecondary, flexShrink: 1 },
+  routeInputGroup: { width: '100%', gap: 8 },
+  routeInput: {
+    width: '100%',
+    minHeight: 44,
+    backgroundColor: Theme.colors.surfaceMuted,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: Theme.colors.text,
+  },
+  routeSummaryText: { fontSize: 13, fontWeight: '700', color: Theme.colors.text, marginBottom: 4 },
   primaryBlackBtn: {
     width: '100%',
     minHeight: 54,

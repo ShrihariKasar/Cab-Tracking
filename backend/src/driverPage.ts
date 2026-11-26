@@ -41,6 +41,11 @@ export const DRIVER_HTML = `<!doctype html>
       <div class="row"><span>GPS Signal</span><strong id="gpsState">Waiting</strong></div>
       <div class="row"><span>Coordinates</span><strong id="coords">-</strong></div>
       <div class="row"><span>Last Synced</span><strong id="syncTime">-</strong></div>
+      <div id="routeInputs" style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+        <input id="pickupInput" placeholder="From (default: Current GPS)" />
+        <input id="destInput" placeholder="To (e.g. Pune Airport / Office)" />
+      </div>
+      <div id="routeSummary" class="muted" style="display:none;font-weight:700;color:#111"></div>
       <button id="startBtn" class="btn" onclick="startRide()">START RIDE</button>
       <button id="endBtn" class="btn end" style="display:none" onclick="endRide()">END RIDE</button>
       <div id="msg" class="muted" style="color:#dc2626"></div>
@@ -96,16 +101,22 @@ export const DRIVER_HTML = `<!doctype html>
       try {
         const pt = await getPos();
         lastPt = pt;
+        const pickupAddress = document.getElementById('pickupInput').value.trim() || 'Current GPS Location';
+        const destinationAddress = document.getElementById('destInput').value.trim() || '';
         const res = await fetch('/api/rides/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify(pt)
+          body: JSON.stringify({ ...pt, pickupAddress, destinationAddress: destinationAddress || undefined })
         });
         const json = await res.json();
         if (!res.ok && res.status !== 409) {
           document.getElementById('msg').textContent = json.message || 'Could not start ride';
           return;
         }
+        document.getElementById('routeInputs').style.display = 'none';
+        const sum = document.getElementById('routeSummary');
+        sum.textContent = destinationAddress ? ('Route: ' + pickupAddress + ' → ' + destinationAddress) : ('From: ' + pickupAddress);
+        sum.style.display = 'block';
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('endBtn').style.display = 'block';
         const badge = document.getElementById('statusBadge');
@@ -148,6 +159,8 @@ export const DRIVER_HTML = `<!doctype html>
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
         body: JSON.stringify(lastPt || {})
       });
+      document.getElementById('routeInputs').style.display = 'flex';
+      document.getElementById('routeSummary').style.display = 'none';
       document.getElementById('startBtn').style.display = 'block';
       document.getElementById('endBtn').style.display = 'none';
       const badge = document.getElementById('statusBadge');

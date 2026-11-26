@@ -38,6 +38,8 @@ export interface DriverListItem {
   activeRideId?: string | null;
   rideStatus?: 'RIDE_STARTED' | 'RIDE_ENDED' | null;
   rideStartTime?: string | null;
+  pickupAddress?: string | null;
+  destinationAddress?: string | null;
 }
 
 export interface ActiveRideItem {

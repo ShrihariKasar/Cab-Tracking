@@ -24,6 +24,8 @@ interface DriverLocationPayload {
   gpsEnabled?: boolean;
   rideStatus?: string | null;
   rideStartTime?: string | null;
+  pickupAddress?: string | null;
+  destinationAddress?: string | null;
 }
 
 export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void }> = ({
@@ -220,6 +222,13 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
 
           <View style={styles.divider} />
 
+          {info?.pickupAddress || info?.destinationAddress ? (
+            <Text style={styles.routeText}>
+              {(info.pickupAddress || 'Current GPS') +
+                (info.destinationAddress ? ` → ${info.destinationAddress}` : '')}
+            </Text>
+          ) : null}
+
           <View style={styles.metaGrid}>
             <MetaItem
               icon="clock"
@@ -318,6 +327,7 @@ const styles = StyleSheet.create({
   sheetName: { fontWeight: '800', color: Theme.colors.text },
   sheetVehicle: { fontSize: 13, color: Theme.colors.textSecondary, marginTop: 2 },
   divider: { height: 1, backgroundColor: Theme.colors.border, marginVertical: 12 },
+  routeText: { fontSize: 13, fontWeight: '700', color: Theme.colors.text, marginBottom: 10 },
   metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   metaItem: { minWidth: '46%', flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
   metaItemFull: { minWidth: '100%' },

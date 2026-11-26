@@ -139,6 +139,9 @@ export const MONITOR_HTML = `<!doctype html>
             '<span class="pill ' + (isLive ? 'live' : '') + '">' + (isLive ? 'ACTIVE RIDE' : d.availabilityStatus) + '</span>' +
           '</div>' +
           '<div class="muted">' + (d.vehicleRegistration || 'No Vehicle') + ' • ' + (d.vehicleModel || '') + '</div>' +
+          (isLive && (d.pickupAddress || d.destinationAddress)
+            ? '<div class="muted" style="color:#111;font-weight:600;margin-top:2px">' + (d.pickupAddress || 'GPS') + (d.destinationAddress ? ' → ' + d.destinationAddress : '') + '</div>'
+            : '') +
           '<div class="muted">Last GPS: ' + (d.capturedAt ? new Date(d.capturedAt).toLocaleTimeString() : 'Waiting...') + '</div>' +
         '</div>';
       }).join('');

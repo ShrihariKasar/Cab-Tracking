@@ -81,3 +81,6 @@ CREATE TABLE IF NOT EXISTS ride_location_history (
 
 CREATE INDEX IF NOT EXISTS idx_rides_driver_status ON rides (driver_id, status);
 CREATE INDEX IF NOT EXISTS idx_ride_history_ride_time ON ride_location_history (ride_id, captured_at DESC);
+
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS pickup_address TEXT;
+ALTER TABLE rides ADD COLUMN IF NOT EXISTS destination_address TEXT;
