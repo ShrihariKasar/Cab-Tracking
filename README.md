@@ -32,11 +32,11 @@ Corporate cab live GPS tracking application built with **React Native + TypeScri
    - **Laptop (Admin Live Map):** Open `http://localhost:4000/monitor`
    - **Phone (Driver GPS Tracker):** Open the `https://....trycloudflare.com` URL in your mobile browser (or paste it into **Configure Server URL** in the React Native app) and tap **START RIDE**.
 
-## Live Field-Test Screenshot
+## Live Field-Test Screenshots
 
-| Laptop Admin Monitor (`http://localhost:4000/monitor` receiving live 4G GPS from phone) |
-| :---: |
-| <img src="screenshots/live-field-test-monitor.jpg" width="680" alt="Live Field Test Admin Monitor" /> |
+| Laptop Admin Monitor (`http://localhost:4000/monitor` receiving live 4G GPS from phone) | Road-Following OSRM Route (`https://fleetpulse-backend-w864.onrender.com/monitor`) |
+| :---: | :---: |
+| <img src="screenshots/live-field-test-monitor.jpg" width="460" alt="Live Field Test Admin Monitor" /> | <img src="screenshots/live-route-osrm-monitor.jpg" width="460" alt="Live Admin Monitor Road-Following Route" /> |
 
 ## Mobile App Screenshots
 
