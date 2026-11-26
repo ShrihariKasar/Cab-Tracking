@@ -1,0 +1,40 @@
+:root {
+  --bg: #f4f7fa;
+  --surface: #ffffff;
+  --text: #102a43;
+  --muted: #486581;
+  --primary: #0f4c81;
+  --secondary: #00a896;
+  --border: #d9e2ec;
+  --danger: #d64545;
+  --warning: #d97706;
+  --success: #1b8a5a;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Inter, system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+.layout { display: flex; min-height: 100vh; }
+.sidebar { width: 240px; background: #0a2540; color: #fff; padding: 20px 14px; display: flex; flex-direction: column; gap: 6px; }
+.sidebar h2 { font-size: 18px; margin: 0 0 18px 8px; }
+.nav-link { color: #cbd5e1; text-decoration: none; padding: 10px 12px; border-radius: 8px; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+.nav-link.active, .nav-link:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.main { flex: 1; padding: 24px; overflow-x: auto; }
+.grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.kpi-val { font-size: 28px; font-weight: 800; color: var(--primary); }
+.kpi-lbl { font-size: 13px; color: var(--muted); margin-top: 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--border); }
+th { font-size: 12px; text-transform: uppercase; color: var(--muted); }
+.btn { padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 13px; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-secondary { background: #e2e8f0; color: var(--text); }
+.btn-danger { background: var(--danger); color: #fff; }
+.input { padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+.badge { padding: 4px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; background: #ebf0f5; }
+.badge-stale { background: #fef3c7; color: #92400e; }
+.badge-live { background: #d1fae5; color: #065f46; }
+@media (max-width: 768px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; }
+}

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>FleetPulse Cabs</string>
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>FleetPulse uses your location to set pickup points and track active rides.</string>
+  <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+  <string>Drivers require background location access so active trip tracking continues when the screen is locked or minimized.</string>
+  <key>UIBackgroundModes</key>
+  <array>
+    <string>location</string>
+    <string>fetch</string>
+    <string>remote-notification</string>
+  </array>
+</dict>
+</plist>
