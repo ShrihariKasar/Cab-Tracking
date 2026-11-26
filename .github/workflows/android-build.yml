@@ -61,6 +61,8 @@ jobs:
           MYAPP_UPLOAD_STORE_PASSWORD=${KEYSTORE_PASSWORD}
           MYAPP_UPLOAD_KEY_PASSWORD=${KEY_PASSWORD}
           EOF
+          elif [ ! -f app/debug.keystore ]; then
+            keytool -genkeypair -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
       - name: Make gradlew executable
