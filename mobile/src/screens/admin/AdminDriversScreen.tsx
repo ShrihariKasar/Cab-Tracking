@@ -148,9 +148,9 @@ export const AdminDriversScreen: React.FC<Props> = ({ onSelectDriver }) => {
 
       {/* 3 Stat Cards */}
       <View style={styles.statsRow}>
-        <StatCard label="Active Rides" value={counts.activeRides} color={Theme.colors.success} />
-        <StatCard label="Total Drivers" value={counts.total} color={Theme.colors.primary} />
-        <StatCard label="Offline" value={counts.offline} color={Theme.colors.error} />
+        <StatCard label="Active Rides" value={counts.activeRides} color={Theme.colors.success} compact={isSmallPhone} />
+        <StatCard label="Total Drivers" value={counts.total} color={Theme.colors.primary} compact={isSmallPhone} />
+        <StatCard label="Offline" value={counts.offline} color={Theme.colors.error} compact={isSmallPhone} />
       </View>
 
       {/* Search Bar */}
@@ -248,8 +248,13 @@ export const AdminDriversScreen: React.FC<Props> = ({ onSelectDriver }) => {
   );
 };
 
-const StatCard: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (
-  <View style={[styles.statCard, Theme.shadow.card]}>
+const StatCard: React.FC<{ label: string; value: number; color: string; compact?: boolean }> = ({
+  label,
+  value,
+  color,
+  compact,
+}) => (
+  <View style={[styles.statCard, Theme.shadow.card, compact && styles.statCardCompact]}>
     <Text style={[styles.statVal, { color }]}>{value}</Text>
     <Text style={styles.statLbl}>{label}</Text>
   </View>
@@ -300,6 +305,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     alignItems: 'center',
   },
+  statCardCompact: { minWidth: '47%' },
   statVal: { fontSize: 20, fontWeight: '800' },
   statLbl: { fontSize: 11, color: Theme.colors.textSecondary, marginTop: 2, textAlign: 'center', fontWeight: '600' },
   searchBox: {

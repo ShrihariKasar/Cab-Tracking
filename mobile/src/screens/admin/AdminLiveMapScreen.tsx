@@ -31,7 +31,7 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
   onBack,
 }) => {
   const insets = useSafeAreaInsets();
-  const { horizontalPadding, height, scaleFont } = useResponsive();
+  const { horizontalPadding, height, isSmallPhone, scaleFont } = useResponsive();
   const [info, setInfo] = useState<DriverLocationPayload | null>(null);
   const [stale, setStale] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -170,7 +170,7 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
 
         <View style={[styles.topPillCard, Theme.shadow.floating]}>
           <View style={styles.flexText}>
-            <Text style={styles.topDriverName} numberOfLines={1}>
+            <Text style={styles.topDriverName}>
               {info?.driverName || 'Loading...'}
             </Text>
             <Text style={styles.topVehicle}>{info?.vehicleRegistration || 'Cab'}</Text>
@@ -225,21 +225,25 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
               icon="clock"
               label="Last GPS"
               value={info?.capturedAt ? new Date(info.capturedAt).toLocaleTimeString() : 'Unavailable'}
+              fullWidth={isSmallPhone}
             />
             <MetaItem
               icon="navigation"
               label="Ride Started"
               value={info?.rideStartTime ? new Date(info.rideStartTime).toLocaleTimeString() : 'Active'}
+              fullWidth={isSmallPhone}
             />
             <MetaItem
               icon={info?.internetConnected === false ? 'wifi-off' : 'wifi'}
               label="Internet"
               value={info?.internetConnected === false ? 'Offline' : 'Connected'}
+              fullWidth={isSmallPhone}
             />
             <MetaItem
               icon="location"
               label="GPS Signal"
               value={info?.gpsEnabled === false ? 'Unavailable' : 'Active'}
+              fullWidth={isSmallPhone}
             />
           </View>
 
@@ -254,8 +258,13 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
   );
 };
 
-const MetaItem: React.FC<{ icon: any; label: string; value: string }> = ({ icon, label, value }) => (
-  <View style={styles.metaItem}>
+const MetaItem: React.FC<{ icon: any; label: string; value: string; fullWidth?: boolean }> = ({
+  icon,
+  label,
+  value,
+  fullWidth,
+}) => (
+  <View style={[styles.metaItem, fullWidth && styles.metaItemFull]}>
     <AppIcon name={icon} size={14} color={Theme.colors.textSecondary} />
     <View style={styles.flexText}>
       <Text style={styles.metaLabel}>{label}</Text>
@@ -310,7 +319,8 @@ const styles = StyleSheet.create({
   sheetVehicle: { fontSize: 13, color: Theme.colors.textSecondary, marginTop: 2 },
   divider: { height: 1, backgroundColor: Theme.colors.border, marginVertical: 12 },
   metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  metaItem: { width: '47%', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  metaItem: { minWidth: '46%', flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  metaItemFull: { minWidth: '100%' },
   metaLabel: { fontSize: 11, color: Theme.colors.textSecondary },
   metaVal: { fontSize: 13, fontWeight: '700', color: Theme.colors.text },
   staleWarn: { fontSize: 12, fontWeight: '700', color: Theme.colors.error, marginTop: 10 },

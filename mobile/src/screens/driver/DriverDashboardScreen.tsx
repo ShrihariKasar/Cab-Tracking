@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mapContainer: { flex: 1, minHeight: 220, position: 'relative' },
+  mapContainer: { flex: 1, minHeight: 140, position: 'relative' },
   map: { ...StyleSheet.absoluteFillObject },
   mapOverlayPills: {
     position: 'absolute',
