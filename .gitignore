@@ -26,6 +26,7 @@ mobile/android/local.properties
 *.ipa
 *.keystore
 *.jks
+mobile/android/keystore.properties
 
 # Logs
 logs/
