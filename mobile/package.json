@@ -28,6 +28,8 @@
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.25.0",
+    "@react-native/babel-preset": "^0.75.4",
+    "@react-native/metro-config": "^0.75.4",
     "@types/jest": "^30.0.0",
     "@types/react": "^18.3.12",
     "@types/react-test-renderer": "^18.3.0",
