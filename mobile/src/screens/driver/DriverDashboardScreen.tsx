@@ -10,6 +10,7 @@ import { CLEAN_MAP_STYLE, getTimeGreeting, Theme } from '../../config/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { gpsService, type GpsStatusSnapshot } from '../../services/gpsService';
+import { searchPlaces, type PlaceSuggestion } from '../../services/locationSearch';
 import { useResponsive } from '../../utils/responsive';
 
 export const DriverDashboardScreen: React.FC = () => {
@@ -20,7 +21,40 @@ export const DriverDashboardScreen: React.FC = () => {
   const [rideStarted, setRideStarted] = useState(false);
   const [pickupAddress, setPickupAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
+  const [destCoords, setDestCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [activeField, setActiveField] = useState<'pickup' | 'dest' | null>(null);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const handlePlaceType = (field: 'pickup' | 'dest', text: string) => {
+    if (field === 'pickup') setPickupAddress(text);
+    else {
+      setDestinationAddress(text);
+      setDestCoords(null);
+    }
+    setActiveField(field);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (text.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    searchTimerRef.current = setTimeout(async () => {
+      const results = await searchPlaces(text);
+      setSuggestions(results);
+    }, 350);
+  };
+
+  const selectSuggestion = (item: PlaceSuggestion) => {
+    if (activeField === 'pickup') {
+      setPickupAddress(item.displayName);
+    } else {
+      setDestinationAddress(item.displayName);
+      setDestCoords({ latitude: item.latitude, longitude: item.longitude });
+    }
+    setSuggestions([]);
+    setActiveField(null);
+  };
   const statusScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -68,6 +102,8 @@ export const DriverDashboardScreen: React.FC = () => {
         ...currentCoords,
         pickupAddress: pickupAddress.trim() || 'Current GPS Location',
         destinationAddress: destinationAddress.trim() || undefined,
+        destinationLatitude: destCoords?.latitude,
+        destinationLongitude: destCoords?.longitude,
       });
       await gpsService.startRideTracking(user.id);
       setRideStarted(true);
@@ -201,18 +237,32 @@ export const DriverDashboardScreen: React.FC = () => {
           <View style={styles.routeInputGroup}>
             <TextInput
               value={pickupAddress}
-              onChangeText={setPickupAddress}
-              placeholder="From (default: Current GPS)"
+              onChangeText={(t) => handlePlaceType('pickup', t)}
+              placeholder="From (type to search or leave blank for GPS)"
               placeholderTextColor={Theme.colors.textSecondary}
               style={styles.routeInput}
             />
             <TextInput
               value={destinationAddress}
-              onChangeText={setDestinationAddress}
-              placeholder="To (e.g. Pune Airport / Office)"
+              onChangeText={(t) => handlePlaceType('dest', t)}
+              placeholder="To (type destination e.g. Pune Airport)"
               placeholderTextColor={Theme.colors.textSecondary}
               style={styles.routeInput}
             />
+            {suggestions.length > 0 ? (
+              <View style={styles.suggestionsBox}>
+                {suggestions.slice(0, 4).map((s) => (
+                  <TouchableOpacity
+                    key={s.placeId}
+                    onPress={() => selectSuggestion(s)}
+                    style={styles.suggestionItem}
+                  >
+                    <AppIcon name="location" size={14} color={Theme.colors.primary} />
+                    <Text style={styles.suggestionText}>{s.displayName}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
             <TouchableOpacity
               activeOpacity={0.85}
               disabled={busy}
@@ -314,6 +364,24 @@ const styles = StyleSheet.create({
     color: Theme.colors.text,
   },
   routeSummaryText: { fontSize: 13, fontWeight: '700', color: Theme.colors.text, marginBottom: 4 },
+  suggestionsBox: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.border,
+  },
+  suggestionText: { flex: 1, flexShrink: 1, fontSize: 13, color: Theme.colors.text },
   primaryBlackBtn: {
     width: '100%',
     minHeight: 54,

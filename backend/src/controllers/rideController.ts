@@ -10,6 +10,8 @@ const rideCoordsSchema = z.object({
   capturedAt: z.string().datetime().optional(),
   pickupAddress: z.string().max(250).optional(),
   destinationAddress: z.string().max(250).optional(),
+  destinationLatitude: z.number().min(-90).max(90).optional(),
+  destinationLongitude: z.number().min(-180).max(180).optional(),
 });
 
 export async function startRide(req: Request, res: Response, next: NextFunction) {
@@ -38,8 +40,8 @@ export async function startRide(req: Request, res: Response, next: NextFunction)
     if (!info) return res.status(404).json({ success: false, message: 'Driver not found' });
 
     const rideRes = await pool.query(
-      `INSERT INTO rides (driver_id, vehicle_id, status, start_time, start_latitude, start_longitude, pickup_address, destination_address)
-       VALUES ($1, $2, 'RIDE_STARTED', NOW(), $3, $4, $5, $6)
+      `INSERT INTO rides (driver_id, vehicle_id, status, start_time, start_latitude, start_longitude, pickup_address, destination_address, destination_latitude, destination_longitude)
+       VALUES ($1, $2, 'RIDE_STARTED', NOW(), $3, $4, $5, $6, $7, $8)
        RETURNING id, start_time AS "startTime"`,
       [
         driverId,
@@ -48,6 +50,8 @@ export async function startRide(req: Request, res: Response, next: NextFunction)
         coords.longitude,
         coords.pickupAddress?.trim() || 'Current GPS Location',
         coords.destinationAddress?.trim() || null,
+        coords.destinationLatitude ?? null,
+        coords.destinationLongitude ?? null,
       ]
     );
     const ride = rideRes.rows[0];
@@ -81,6 +85,8 @@ export async function startRide(req: Request, res: Response, next: NextFunction)
       longitude: coords.longitude,
       pickupAddress: coords.pickupAddress?.trim() || 'Current GPS Location',
       destinationAddress: coords.destinationAddress?.trim() || null,
+      destinationLatitude: coords.destinationLatitude ?? null,
+      destinationLongitude: coords.destinationLongitude ?? null,
     };
 
     const io = req.app.get('io');
@@ -192,7 +198,8 @@ export async function getRideRoute(req: Request, res: Response, next: NextFuncti
       `SELECT id, driver_id AS "driverId", status, start_time AS "startTime", end_time AS "endTime",
               start_latitude AS "startLat", start_longitude AS "startLng",
               end_latitude AS "endLat", end_longitude AS "endLng",
-              pickup_address AS "pickupAddress", destination_address AS "destinationAddress"
+              pickup_address AS "pickupAddress", destination_address AS "destinationAddress",
+              destination_latitude AS "destinationLat", destination_longitude AS "destinationLng"
        FROM rides WHERE id = $1`,
       [rideId]
     );

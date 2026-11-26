@@ -26,6 +26,8 @@ interface DriverLocationPayload {
   rideStartTime?: string | null;
   pickupAddress?: string | null;
   destinationAddress?: string | null;
+  destinationLatitude?: number | null;
+  destinationLongitude?: number | null;
 }
 
 export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void }> = ({
@@ -156,6 +158,14 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
           <Marker.Animated coordinate={animatedCoord as any} anchor={{ x: 0.5, y: 0.5 }}>
             <CustomVehicleMarker active={!isOfflineOrStale} offline={isOfflineOrStale} />
           </Marker.Animated>
+        ) : null}
+        {info?.destinationLatitude && info?.destinationLongitude ? (
+          <Marker
+            coordinate={{ latitude: info.destinationLatitude, longitude: info.destinationLongitude }}
+            title="Destination"
+            description={info.destinationAddress || ''}
+            pinColor="red"
+          />
         ) : null}
       </MapView>
 

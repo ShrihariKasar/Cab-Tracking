@@ -23,7 +23,8 @@ export async function listDrivers(_req: Request, res: Response, next: NextFuncti
               v.registration_number AS "vehicleRegistration", v.model AS "vehicleModel", v.colour AS "vehicleColour",
               dl.latitude, dl.longitude, dl.accuracy, dl.captured_at AS "capturedAt", dl.last_synced_at AS "lastSyncedAt",
               r.id AS "activeRideId", r.status AS "rideStatus", r.start_time AS "rideStartTime",
-              r.pickup_address AS "pickupAddress", r.destination_address AS "destinationAddress"
+              r.pickup_address AS "pickupAddress", r.destination_address AS "destinationAddress",
+              r.destination_latitude AS "destinationLatitude", r.destination_longitude AS "destinationLongitude"
        FROM drivers d
        LEFT JOIN vehicles v ON v.driver_id = d.id
        LEFT JOIN driver_locations dl ON dl.driver_id = d.id
@@ -50,7 +51,8 @@ export async function getDriverById(req: Request, res: Response, next: NextFunct
               v.id AS "vehicleId", v.registration_number AS "vehicleRegistration", v.model AS "vehicleModel", v.colour AS "vehicleColour",
               dl.latitude, dl.longitude, dl.accuracy, dl.captured_at AS "capturedAt", dl.last_synced_at AS "lastSyncedAt",
               r.id AS "activeRideId", r.status AS "rideStatus", r.start_time AS "rideStartTime",
-              r.pickup_address AS "pickupAddress", r.destination_address AS "destinationAddress"
+              r.pickup_address AS "pickupAddress", r.destination_address AS "destinationAddress",
+              r.destination_latitude AS "destinationLatitude", r.destination_longitude AS "destinationLongitude"
        FROM drivers d
        LEFT JOIN vehicles v ON v.driver_id = d.id
        LEFT JOIN driver_locations dl ON dl.driver_id = d.id
@@ -175,7 +177,8 @@ export async function getDriverLocation(req: Request, res: Response, next: NextF
               d.internet_connected AS "internetConnected", d.gps_enabled AS "gpsEnabled",
               v.registration_number AS "vehicleRegistration", v.model AS "vehicleModel",
               r.status AS "rideStatus", r.start_time AS "rideStartTime",
-              r.pickup_address AS "pickupAddress", r.destination_address AS "destinationAddress"
+              r.pickup_address AS "pickupAddress", r.destination_address AS "destinationAddress",
+              r.destination_latitude AS "destinationLatitude", r.destination_longitude AS "destinationLongitude"
        FROM drivers d
        LEFT JOIN driver_locations dl ON dl.driver_id = d.id
        LEFT JOIN vehicles v ON v.driver_id = d.id

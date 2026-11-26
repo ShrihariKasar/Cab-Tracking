@@ -41,9 +41,10 @@ export const DRIVER_HTML = `<!doctype html>
       <div class="row"><span>GPS Signal</span><strong id="gpsState">Waiting</strong></div>
       <div class="row"><span>Coordinates</span><strong id="coords">-</strong></div>
       <div class="row"><span>Last Synced</span><strong id="syncTime">-</strong></div>
-      <div id="routeInputs" style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
-        <input id="pickupInput" placeholder="From (default: Current GPS)" />
-        <input id="destInput" placeholder="To (e.g. Pune Airport / Office)" />
+      <div id="routeInputs" style="display:flex;flex-direction:column;gap:8px;margin-top:4px;position:relative">
+        <input id="pickupInput" placeholder="From (type to search or leave blank for GPS)" oninput="searchPlaces('pickup', this.value)" autocomplete="off" />
+        <input id="destInput" placeholder="To (type destination e.g. Pune Airport)" oninput="searchPlaces('dest', this.value)" autocomplete="off" />
+        <div id="suggestions" style="display:none;flex-direction:column;border:1px solid #e5e5e5;border-radius:10px;overflow:hidden;background:#fff"></div>
       </div>
       <div id="routeSummary" class="muted" style="display:none;font-weight:700;color:#111"></div>
       <button id="startBtn" class="btn" onclick="startRide()">START RIDE</button>
@@ -59,6 +60,39 @@ export const DRIVER_HTML = `<!doctype html>
     let watchId = null;
     let lastPt = null;
     let lastEmit = 0;
+    let selectedDestCoords = null;
+    let searchTimer = null;
+
+    function searchPlaces(target, query) {
+      clearTimeout(searchTimer);
+      const box = document.getElementById('suggestions');
+      if (!query || query.trim().length < 3) { box.style.display = 'none'; return; }
+      searchTimer = setTimeout(async () => {
+        try {
+          const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' + encodeURIComponent(query.trim()));
+          const list = await r.json();
+          if (!list.length) { box.style.display = 'none'; return; }
+          box.innerHTML = '';
+          list.forEach((item) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.style = 'text-align:left;padding:10px 12px;border:none;border-bottom:1px solid #f0f0f0;background:#fff;cursor:pointer;font-size:13px;color:#111';
+            btn.textContent = item.display_name;
+            btn.onclick = () => {
+              if (target === 'pickup') {
+                document.getElementById('pickupInput').value = item.display_name;
+              } else {
+                document.getElementById('destInput').value = item.display_name;
+                selectedDestCoords = { lat: parseFloat(item.lat), lng: parseFloat(item.lon) };
+              }
+              box.style.display = 'none';
+            };
+            box.appendChild(btn);
+          });
+          box.style.display = 'flex';
+        } catch {}
+      }, 350);
+    }
 
     async function login() {
       const mobileNumber = document.getElementById('mobile').value.trim();
@@ -106,7 +140,13 @@ export const DRIVER_HTML = `<!doctype html>
         const res = await fetch('/api/rides/start', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify({ ...pt, pickupAddress, destinationAddress: destinationAddress || undefined })
+          body: JSON.stringify({
+            ...pt,
+            pickupAddress,
+            destinationAddress: destinationAddress || undefined,
+            destinationLatitude: selectedDestCoords ? selectedDestCoords.lat : undefined,
+            destinationLongitude: selectedDestCoords ? selectedDestCoords.lng : undefined
+          })
         });
         const json = await res.json();
         if (!res.ok && res.status !== 409) {

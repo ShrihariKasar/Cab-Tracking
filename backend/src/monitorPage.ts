@@ -52,12 +52,15 @@ export const MONITOR_HTML = `<!doctype html>
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxZoom: 19 }).addTo(map);
     const markers = {};
     const startMarkers = {};
+    const destMarkers = {};
     const routes = {};
+    const plannedLines = {};
     let token = '';
     let drivers = [];
 
     const carIcon = L.divIcon({ className: '', html: '<div class="car-icon">🚕</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
     const startIcon = L.divIcon({ className: '', html: '<div class="start-pin">START</div>', iconSize: [54, 24], iconAnchor: [27, 12] });
+    const destIcon = L.divIcon({ className: '', html: '<div class="start-pin" style="background:#dc2626">END</div>', iconSize: [48, 24], iconAnchor: [24, 12] });
 
     async function login() {
       const mobileNumber = document.getElementById('mobile').value.trim();
@@ -113,6 +116,18 @@ export const MONITOR_HTML = `<!doctype html>
         routes[driverId].setLatLngs(coords);
       } else {
         routes[driverId] = L.polyline(coords, { color: '#000000', weight: 4, opacity: 0.85 }).addTo(map);
+      }
+      if (r.destinationLat && r.destinationLng) {
+        if (!destMarkers[driverId]) {
+          destMarkers[driverId] = L.marker([r.destinationLat, r.destinationLng], { icon: destIcon }).addTo(map).bindPopup('<b>Destination</b><br/>' + (r.destinationAddress || ''));
+        } else {
+          destMarkers[driverId].setLatLng([r.destinationLat, r.destinationLng]);
+        }
+        const planPts = (r.startLat && r.startLng) ? [[r.startLat, r.startLng], [r.destinationLat, r.destinationLng]] : [];
+        if (planPts.length === 2) {
+          if (plannedLines[driverId]) plannedLines[driverId].setLatLngs(planPts);
+          else plannedLines[driverId] = L.polyline(planPts, { color: '#717171', weight: 3, dashArray: '6, 8', opacity: 0.7 }).addTo(map);
+        }
       }
     }
 
