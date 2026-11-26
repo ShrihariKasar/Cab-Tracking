@@ -21,6 +21,11 @@ buildscript {
 apply plugin: "com.facebook.react.rootproject"
 
 allprojects {
+    repositories {
+        maven { url "https://maven-central.storage-download.googleapis.com/maven2" }
+        google()
+        mavenCentral()
+    }
     configurations.all {
         resolutionStrategy {
             force "androidx.core:core:1.13.1"
