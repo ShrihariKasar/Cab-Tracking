@@ -103,6 +103,12 @@ class GpsService {
         );
       }
 
+      if (Platform.Version >= 33 && PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS) {
+        await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+        ).catch(() => {});
+      }
+
       this.state.permissionGranted = true;
       this.state.permissionDeniedPermanent = false;
       this.emit();
@@ -178,38 +184,45 @@ class GpsService {
       });
     }
 
+    const startWatch = () => {
+      if (this.watchId !== null) {
+        Geolocation.clearWatch(this.watchId);
+      }
+      this.watchId = Geolocation.watchPosition(
+        (pos) => {
+          this.state.gpsEnabled = true;
+          const now = Date.now();
+          if (now - this.lastEmitMs < 4500) return;
+          this.lastEmitMs = now;
+
+          const pt: GpsPoint = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy ?? 0,
+            capturedAt: new Date(pos.timestamp).toISOString(),
+          };
+          this.state.lastCapturedLocation = pt;
+          this.dispatchLocation(pt);
+        },
+        () => {
+          this.state.gpsEnabled = false;
+          this.state.statusMessage = 'GPS unavailable';
+          this.emit();
+        },
+        {
+          enableHighAccuracy: true,
+          distanceFilter: 10,
+          interval: 5000,
+          fastestInterval: 4000,
+          showsBackgroundLocationIndicator: true,
+          forceRequestLocation: true,
+        }
+      );
+    };
+
     const bgTask = async () => {
       await new Promise((resolve) => {
-        this.watchId = Geolocation.watchPosition(
-          (pos) => {
-            this.state.gpsEnabled = true;
-            const now = Date.now();
-            if (now - this.lastEmitMs < 4500) return;
-            this.lastEmitMs = now;
-
-            const pt: GpsPoint = {
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-              accuracy: pos.coords.accuracy ?? 0,
-              capturedAt: new Date(pos.timestamp).toISOString(),
-            };
-            this.state.lastCapturedLocation = pt;
-            this.dispatchLocation(pt);
-          },
-          () => {
-            this.state.gpsEnabled = false;
-            this.state.statusMessage = 'GPS unavailable';
-            this.emit();
-          },
-          {
-            enableHighAccuracy: true,
-            distanceFilter: 10,
-            interval: 5000,
-            fastestInterval: 4000,
-            showsBackgroundLocationIndicator: true,
-            forceRequestLocation: true,
-          }
-        );
+        startWatch();
 
         const guard = setInterval(() => {
           if (!BackgroundService.isRunning()) {
@@ -221,14 +234,20 @@ class GpsService {
     };
 
     if (!BackgroundService.isRunning()) {
-      await BackgroundService.start(bgTask, {
-        taskName: 'CabLiveTracking',
-        taskTitle: 'Active Ride GPS Tracking',
-        taskDesc: 'Sharing live cab location with company administrator',
-        taskIcon: { name: 'ic_launcher', type: 'mipmap' },
-        color: '#1D4ED8',
-        parameters: {},
-      });
+      try {
+        await BackgroundService.start(bgTask, {
+          taskName: 'CabLiveTracking',
+          taskTitle: 'Active Ride GPS Tracking',
+          taskDesc: 'Sharing live cab location with company administrator',
+          taskIcon: { name: 'ic_launcher', type: 'mipmap' },
+          color: '#1D4ED8',
+          foregroundServiceType: ['location'],
+          parameters: {},
+        });
+      } catch {
+        // Fallback to foreground watch if OS denies background foreground service
+        startWatch();
+      }
     }
   }
 
@@ -289,7 +308,11 @@ class GpsService {
       this.watchId = null;
     }
     if (BackgroundService.isRunning()) {
-      await BackgroundService.stop();
+      try {
+        await BackgroundService.stop();
+      } catch {
+        // Ignore if service already stopped by OS
+      }
     }
     if (this.netUnsub) {
       this.netUnsub();
