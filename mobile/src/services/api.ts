@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { ENV } from '../config/env';
-import { getToken } from './secureStorage';
+import { getServerUrl, getToken } from './secureStorage';
 
 export const api = axios.create({
   baseURL: ENV.API_URL,
@@ -9,7 +9,10 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const token = await getToken();
+  const [token, customOrigin] = await Promise.all([getToken(), getServerUrl()]);
+  if (customOrigin) {
+    config.baseURL = `${customOrigin}/api`;
+  }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

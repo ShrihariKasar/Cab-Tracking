@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
 import { Theme } from '../config/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { getServerUrl, saveServerUrl } from '../services/secureStorage';
 import type { UserRole } from '../types';
 import { useResponsive } from '../utils/responsive';
 
@@ -25,7 +26,15 @@ export const LoginScreen: React.FC = () => {
   const [role, setRole] = useState<UserRole>('DRIVER');
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
+  const [serverUrl, setServerUrl] = useState('');
+  const [showServerConfig, setShowServerConfig] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    getServerUrl().then((saved) => {
+      if (saved) setServerUrl(saved);
+    });
+  }, []);
 
   const handleLogin = async () => {
     if (!mobileNumber.trim() || !password) {
@@ -34,6 +43,7 @@ export const LoginScreen: React.FC = () => {
     }
     setBusy(true);
     try {
+      await saveServerUrl(serverUrl);
       await login(mobileNumber.trim(), password, role);
     } catch (err: any) {
       Alert.alert('Login Failed', err?.response?.data?.message || 'Invalid mobile number or password.');
@@ -117,6 +127,31 @@ export const LoginScreen: React.FC = () => {
                 {busy ? 'Signing in...' : `Continue as ${role === 'DRIVER' ? 'Driver' : 'Admin'}`}
               </Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setShowServerConfig((v) => !v)}
+              style={styles.serverToggle}
+            >
+              <AppIcon name="settings" size={14} color={Theme.colors.textSecondary} />
+              <Text style={styles.serverToggleText}>
+                {showServerConfig ? 'Hide Server URL' : 'Configure Server URL'}
+              </Text>
+            </TouchableOpacity>
+
+            {showServerConfig ? (
+              <View style={styles.serverBox}>
+                <Text style={styles.label}>Backend / Tunnel HTTPS URL</Text>
+                <TextInput
+                  value={serverUrl}
+                  onChangeText={setServerUrl}
+                  placeholder="https://your-tunnel.trycloudflare.com"
+                  placeholderTextColor={Theme.colors.textSecondary}
+                  autoCapitalize="none"
+                  keyboardType="url"
+                  style={styles.input}
+                />
+              </View>
+            ) : null}
           </View>
         </View>
       </ScrollView>
@@ -189,4 +224,14 @@ const styles = StyleSheet.create({
   },
   loginBtnDisabled: { opacity: 0.65 },
   loginBtnText: { color: Theme.colors.secondary, fontWeight: '700', fontSize: 15, textAlign: 'center' },
+  serverToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 44,
+    marginTop: 4,
+  },
+  serverToggleText: { fontSize: 13, fontWeight: '600', color: Theme.colors.textSecondary },
+  serverBox: { gap: 8, marginTop: 4 },
 });
