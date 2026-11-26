@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { AnimatedRegion, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/AppIcon';
 import { CustomVehicleMarker } from '../../components/CustomVehicleMarker';
@@ -10,6 +10,7 @@ import { CLEAN_MAP_STYLE, Theme } from '../../config/theme';
 import { api } from '../../services/api';
 import { socketManager } from '../../services/socket';
 import { useResponsive } from '../../utils/responsive';
+import { fetchRoadRoute, type LatLngPoint } from '../../utils/routing';
 
 interface DriverLocationPayload {
   driverId: string;
@@ -37,6 +38,7 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
   const insets = useSafeAreaInsets();
   const { horizontalPadding, height, isSmallPhone, scaleFont } = useResponsive();
   const [info, setInfo] = useState<DriverLocationPayload | null>(null);
+  const [routeCoords, setRouteCoords] = useState<LatLngPoint[]>([]);
   const [stale, setStale] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const mapRef = useRef<MapView | null>(null);
@@ -127,6 +129,22 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
     };
   }, [driverId, moveMarker]);
 
+  useEffect(() => {
+    if (info?.latitude && info?.longitude && info?.destinationLatitude && info?.destinationLongitude) {
+      let active = true;
+      fetchRoadRoute(
+        { latitude: info.latitude, longitude: info.longitude },
+        { latitude: info.destinationLatitude, longitude: info.destinationLongitude }
+      ).then((pts) => {
+        if (active) setRouteCoords(pts);
+      });
+      return () => {
+        active = false;
+      };
+    }
+    setRouteCoords([]);
+  }, [info?.destinationLatitude, info?.destinationLongitude, Boolean(info?.latitude && info?.longitude)]);
+
   const recenter = () => {
     if (info?.latitude && info?.longitude) {
       mapRef.current?.animateToRegion({
@@ -158,6 +176,9 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
           <Marker.Animated coordinate={animatedCoord as any} anchor={{ x: 0.5, y: 0.5 }}>
             <CustomVehicleMarker active={!isOfflineOrStale} offline={isOfflineOrStale} />
           </Marker.Animated>
+        ) : null}
+        {routeCoords.length > 1 ? (
+          <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
         ) : null}
         {info?.destinationLatitude && info?.destinationLongitude ? (
           <Marker

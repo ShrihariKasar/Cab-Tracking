@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert, Animated, Image, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/AppIcon';
 import { CustomVehicleMarker } from '../../components/CustomVehicleMarker';
@@ -12,6 +12,7 @@ import { api } from '../../services/api';
 import { gpsService, type GpsStatusSnapshot } from '../../services/gpsService';
 import { searchPlaces, type PlaceSuggestion } from '../../services/locationSearch';
 import { useResponsive } from '../../utils/responsive';
+import { fetchRoadRoute, type LatLngPoint } from '../../utils/routing';
 
 export const DriverDashboardScreen: React.FC = () => {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ export const DriverDashboardScreen: React.FC = () => {
   const [pickupAddress, setPickupAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
   const [destCoords, setDestCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [routeCoords, setRouteCoords] = useState<LatLngPoint[]>([]);
   const [activeField, setActiveField] = useState<'pickup' | 'dest' | null>(null);
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -143,6 +145,19 @@ export const DriverDashboardScreen: React.FC = () => {
   const lng = gps.lastCapturedLocation?.longitude ?? 77.5946;
   const accuracyText = gps.lastCapturedLocation ? `±${Math.round(gps.lastCapturedLocation.accuracy)}m` : 'Locating';
 
+  useEffect(() => {
+    if (destCoords) {
+      let active = true;
+      fetchRoadRoute({ latitude: lat, longitude: lng }, destCoords).then((pts) => {
+        if (active) setRouteCoords(pts);
+      });
+      return () => {
+        active = false;
+      };
+    }
+    setRouteCoords([]);
+  }, [destCoords, lat, lng]);
+
   return (
     <View style={styles.container}>
       {/* Top Floating Header */}
@@ -183,6 +198,12 @@ export const DriverDashboardScreen: React.FC = () => {
           customMapStyle={CLEAN_MAP_STYLE}
           region={{ latitude: lat, longitude: lng, latitudeDelta: 0.012, longitudeDelta: 0.012 }}
         >
+          {routeCoords.length > 1 ? (
+            <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
+          ) : null}
+          {destCoords ? (
+            <Marker coordinate={destCoords} title="Destination" description={destinationAddress} pinColor="red" />
+          ) : null}
           <Marker coordinate={{ latitude: lat, longitude: lng }} anchor={{ x: 0.5, y: 0.5 }}>
             <CustomVehicleMarker active={rideStarted} offline={!gps.internetConnected} />
           </Marker>

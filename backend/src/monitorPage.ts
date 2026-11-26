@@ -55,6 +55,7 @@ export const MONITOR_HTML = `<!doctype html>
     const destMarkers = {};
     const routes = {};
     const plannedLines = {};
+    const osrmRouteCache = {};
     let token = '';
     let drivers = [];
 
@@ -123,10 +124,30 @@ export const MONITOR_HTML = `<!doctype html>
         } else {
           destMarkers[driverId].setLatLng([r.destinationLat, r.destinationLng]);
         }
-        const planPts = (r.startLat && r.startLng) ? [[r.startLat, r.startLng], [r.destinationLat, r.destinationLng]] : [];
-        if (planPts.length === 2) {
+        if (r.startLat && r.startLng) {
+          const cacheKey = rideId + ':' + r.startLat + ',' + r.startLng + '->' + r.destinationLat + ',' + r.destinationLng;
+          let planPts = osrmRouteCache[cacheKey];
+          if (!planPts) {
+            try {
+              const osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' +
+                r.startLng + ',' + r.startLat + ';' + r.destinationLng + ',' + r.destinationLat +
+                '?overview=full&geometries=geojson';
+              const osrmRes = await fetch(osrmUrl);
+              if (osrmRes.ok) {
+                const osrmJson = await osrmRes.json();
+                const coordsGeo = osrmJson && osrmJson.routes && osrmJson.routes[0] && osrmJson.routes[0].geometry && osrmJson.routes[0].geometry.coordinates;
+                if (Array.isArray(coordsGeo) && coordsGeo.length > 1) {
+                  planPts = coordsGeo.map((c) => [c[1], c[0]]);
+                  osrmRouteCache[cacheKey] = planPts;
+                }
+              }
+            } catch (_) {}
+          }
+          if (!planPts) {
+            planPts = [[r.startLat, r.startLng], [r.destinationLat, r.destinationLng]];
+          }
           if (plannedLines[driverId]) plannedLines[driverId].setLatLngs(planPts);
-          else plannedLines[driverId] = L.polyline(planPts, { color: '#717171', weight: 3, dashArray: '6, 8', opacity: 0.7 }).addTo(map);
+          else plannedLines[driverId] = L.polyline(planPts, { color: '#2563EB', weight: 4, opacity: 0.8 }).addTo(map);
         }
       }
     }
