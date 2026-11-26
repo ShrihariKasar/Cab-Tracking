@@ -68,11 +68,6 @@ jest.mock('react-native-safe-area-context', () => {
   };
 });
 
-jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
-  const React = require('react');
-  return (props: any) => React.createElement('Icon', props);
-});
-
 jest.mock('lucide-react-native', () => {
   const React = require('react');
   const stub = (props: any) => React.createElement('LucideIcon', props);
