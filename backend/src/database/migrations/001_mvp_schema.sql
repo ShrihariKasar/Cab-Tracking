@@ -1,4 +1,4 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- gen_random_uuid() is built into PostgreSQL 13+ core
 
 -- 1. admins
 CREATE TABLE IF NOT EXISTS admins (
