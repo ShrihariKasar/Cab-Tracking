@@ -173,3 +173,34 @@ export async function getActiveRides(_req: Request, res: Response, next: NextFun
     next(err);
   }
 }
+
+export async function getRideRoute(req: Request, res: Response, next: NextFunction) {
+  try {
+    const rideId = String(req.params.id);
+    const rideRes = await pool.query(
+      `SELECT id, driver_id AS "driverId", status, start_time AS "startTime", end_time AS "endTime",
+              start_latitude AS "startLat", start_longitude AS "startLng",
+              end_latitude AS "endLat", end_longitude AS "endLng"
+       FROM rides WHERE id = $1`,
+      [rideId]
+    );
+    const ride = rideRes.rows[0];
+    if (!ride) return res.status(404).json({ success: false, message: 'Ride not found' });
+
+    const ptsRes = await pool.query(
+      `SELECT latitude, longitude, captured_at AS "capturedAt"
+       FROM ride_location_history WHERE ride_id = $1 ORDER BY captured_at ASC`,
+      [rideId]
+    );
+
+    res.json({
+      success: true,
+      data: {
+        ...ride,
+        points: ptsRes.rows,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}

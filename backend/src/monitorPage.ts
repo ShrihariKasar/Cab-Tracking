@@ -21,6 +21,8 @@ export const MONITOR_HTML = `<!doctype html>
     .btn { background: #000; color: #fff; border: none; border-radius: 10px; padding: 10px 14px; font-weight: 700; cursor: pointer; width: 100%; }
     input { width: 100%; padding: 10px; border: 1px solid #d4d4d4; border-radius: 10px; margin-bottom: 8px; }
     .muted { font-size: 12px; color: #717171; }
+    .car-icon { background: #000; color: #fff; width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 3px 10px rgba(0,0,0,0.35); }
+    .start-pin { background: #16a34a; color: #fff; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.25); }
     @media (max-width: 768px) { main { flex-direction: column; } #sidebar { width: 100%; max-height: 40vh; } }
   </style>
 </head>
@@ -46,11 +48,16 @@ export const MONITOR_HTML = `<!doctype html>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    const map = L.map('map').setView([12.9716, 77.5946], 13);
+    const map = L.map('map').setView([19.88, 74.48], 13);
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri', maxZoom: 19 }).addTo(map);
     const markers = {};
+    const startMarkers = {};
+    const routes = {};
     let token = '';
     let drivers = [];
+
+    const carIcon = L.divIcon({ className: '', html: '<div class="car-icon">🚕</div>', iconSize: [34, 34], iconAnchor: [17, 17] });
+    const startIcon = L.divIcon({ className: '', html: '<div class="start-pin">START</div>', iconSize: [54, 24], iconAnchor: [27, 12] });
 
     async function login() {
       const mobileNumber = document.getElementById('mobile').value.trim();
@@ -77,9 +84,36 @@ export const MONITOR_HTML = `<!doctype html>
       const json = await res.json();
       drivers = json.data || [];
       renderDrivers();
-      drivers.forEach((d) => {
-        if (d.latitude && d.longitude) updateMarker(d.id, d.fullName, d.vehicleRegistration, d.latitude, d.longitude, d.capturedAt);
-      });
+      for (const d of drivers) {
+        if (d.activeRideId) {
+          await loadRideRoute(d.id, d.activeRideId);
+        }
+        if (d.latitude && d.longitude) {
+          updateMarker(d.id, d.fullName, d.vehicleRegistration, d.latitude, d.longitude, d.capturedAt);
+        }
+      }
+    }
+
+    async function loadRideRoute(driverId, rideId) {
+      const res = await fetch('/api/rides/' + rideId + '/route', { headers: { Authorization: 'Bearer ' + token } });
+      if (!res.ok) return;
+      const json = await res.json();
+      const r = json.data;
+      const coords = [];
+      if (r.startLat && r.startLng) {
+        coords.push([r.startLat, r.startLng]);
+        if (!startMarkers[driverId]) {
+          startMarkers[driverId] = L.marker([r.startLat, r.startLng], { icon: startIcon }).addTo(map);
+        } else {
+          startMarkers[driverId].setLatLng([r.startLat, r.startLng]);
+        }
+      }
+      (r.points || []).forEach((p) => coords.push([p.latitude, p.longitude]));
+      if (routes[driverId]) {
+        routes[driverId].setLatLngs(coords);
+      } else {
+        routes[driverId] = L.polyline(coords, { color: '#000000', weight: 4, opacity: 0.85 }).addTo(map);
+      }
     }
 
     function updateMarker(id, name, reg, lat, lng, ts) {
@@ -87,7 +121,10 @@ export const MONITOR_HTML = `<!doctype html>
       if (markers[id]) {
         markers[id].setLatLng([lat, lng]).setPopupContent(label);
       } else {
-        markers[id] = L.marker([lat, lng]).addTo(map).bindPopup(label).openPopup();
+        markers[id] = L.marker([lat, lng], { icon: carIcon }).addTo(map).bindPopup(label).openPopup();
+      }
+      if (routes[id]) {
+        routes[id].addLatLng([lat, lng]);
       }
       map.panTo([lat, lng]);
     }
