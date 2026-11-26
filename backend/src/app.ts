@@ -5,10 +5,12 @@ import helmet from 'helmet';
 import { ZodError } from 'zod';
 import { env } from './config/env.js';
 import { apiRouter } from './modules/routes.js';
+import { MONITOR_HTML } from './monitorPage.js';
+import { DRIVER_HTML } from './driverPage.js';
 
 export function createApp() {
   const app = express();
-  app.use(helmet());
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors({ origin: env.corsOrigins, credentials: true }));
   app.use(express.json({ limit: '1mb' }));
 
@@ -16,6 +18,18 @@ export function createApp() {
     '/api/auth',
     rateLimit({ windowMs: 15 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false })
   );
+
+  app.get('/', (_req, res) => {
+    res.type('html').send(DRIVER_HTML);
+  });
+
+  app.get('/driver', (_req, res) => {
+    res.type('html').send(DRIVER_HTML);
+  });
+
+  app.get('/monitor', (_req, res) => {
+    res.type('html').send(MONITOR_HTML);
+  });
 
   app.use('/api', apiRouter);
 
