@@ -2,11 +2,19 @@ import { Router } from 'express';
 import * as authCtrl from '../controllers/authController.js';
 import * as driverCtrl from '../controllers/driverController.js';
 import * as rideCtrl from '../controllers/rideController.js';
+import { pool } from '../database/pool.js';
 import { requireAdmin, requireAuth } from '../middleware/auth.js';
 
 export const apiRouter = Router();
 
-apiRouter.get('/health', (_req, res) => res.json({ ok: true }));
+apiRouter.get('/health', async (_req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ ok: true, db: 'connected' });
+  } catch (err: any) {
+    res.status(500).json({ ok: false, db: 'error', message: err?.message });
+  }
+});
 
 apiRouter.post('/auth/login', authCtrl.login);
 

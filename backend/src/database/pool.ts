@@ -32,9 +32,10 @@ function createPool(): DbPool {
     };
   }
 
-  const needsSsl = env.databaseUrl.includes('sslmode=require') || env.databaseUrl.includes('neon.tech');
+  const connStr = env.databaseUrl.replace(/[?&]channel_binding=require/g, '');
+  const needsSsl = connStr.includes('sslmode=require') || connStr.includes('neon.tech');
   return new Pool({
-    connectionString: env.databaseUrl,
+    connectionString: connStr,
     ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
     max: 15,
     idleTimeoutMillis: 30000,
