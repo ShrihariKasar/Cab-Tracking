@@ -11,10 +11,11 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AppIcon } from '../components/AppIcon';
 import { Theme } from '../config/theme';
 import { useAuth } from '../contexts/AuthContext';
-import { useResponsive } from '../utils/responsive';
 import type { UserRole } from '../types';
+import { useResponsive } from '../utils/responsive';
 
 export const LoginScreen: React.FC = () => {
   const { login } = useAuth();
@@ -52,19 +53,29 @@ export const LoginScreen: React.FC = () => {
           styles.scrollContent,
           {
             paddingHorizontal: horizontalPadding,
-            paddingTop: Math.max(insets.top, 20),
+            paddingTop: Math.max(insets.top, 24),
             paddingBottom: Math.max(insets.bottom, 24),
           },
         ]}
       >
         <View style={styles.inner}>
-          <Text style={[styles.title, { fontSize: scaleFont(26) }]}>Cab Live Tracking</Text>
-          <Text style={[styles.subtitle, { fontSize: scaleFont(14) }]}>Corporate Fleet Portal</Text>
+          <View style={styles.brandRow}>
+            <View style={styles.logoMark}>
+              <AppIcon name="car" size={24} color="#FFFFFF" />
+            </View>
+            <Text style={styles.brandName}>FleetPulse</Text>
+          </View>
+
+          <Text style={[styles.title, { fontSize: scaleFont(28) }]}>Welcome back</Text>
+          <Text style={[styles.subtitle, { fontSize: scaleFont(14) }]}>
+            Sign in to continue to your fleet workspace
+          </Text>
 
           <View style={styles.roleSwitch}>
             {(['DRIVER', 'ADMIN'] as const).map((r) => (
               <TouchableOpacity
                 key={r}
+                activeOpacity={0.85}
                 onPress={() => setRole(r)}
                 style={[styles.roleBtn, role === r && styles.roleBtnActive]}
               >
@@ -75,13 +86,13 @@ export const LoginScreen: React.FC = () => {
             ))}
           </View>
 
-          <View style={styles.card}>
+          <View style={[styles.card, Theme.shadow.card]}>
             <Text style={styles.label}>Mobile Number</Text>
             <TextInput
               value={mobileNumber}
               onChangeText={setMobileNumber}
-              placeholder="+15550000002"
-              placeholderTextColor={Theme.colors.textMuted}
+              placeholder="+1 555 000 0002"
+              placeholderTextColor={Theme.colors.textSecondary}
               keyboardType="phone-pad"
               style={styles.input}
             />
@@ -91,13 +102,20 @@ export const LoginScreen: React.FC = () => {
               value={password}
               onChangeText={setPassword}
               placeholder="Enter password"
-              placeholderTextColor={Theme.colors.textMuted}
+              placeholderTextColor={Theme.colors.textSecondary}
               secureTextEntry
               style={styles.input}
             />
 
-            <TouchableOpacity disabled={busy} onPress={handleLogin} style={styles.loginBtn}>
-              <Text style={styles.loginBtnText}>{busy ? 'Signing in...' : `Sign In as ${role}`}</Text>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              disabled={busy}
+              onPress={handleLogin}
+              style={[styles.loginBtn, busy && styles.loginBtnDisabled]}
+            >
+              <Text style={styles.loginBtnText}>
+                {busy ? 'Signing in...' : `Continue as ${role === 'DRIVER' ? 'Driver' : 'Admin'}`}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -110,14 +128,22 @@ const styles = StyleSheet.create({
   flex: { flex: 1, backgroundColor: Theme.colors.background },
   scrollContent: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
   inner: { width: '100%', maxWidth: 440 },
-  title: { fontWeight: '800', color: Theme.colors.text, textAlign: 'center' },
-  subtitle: { color: Theme.colors.textMuted, textAlign: 'center', marginTop: 4, marginBottom: 20 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+  logoMark: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: Theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  brandName: { fontSize: 18, fontWeight: '800', color: Theme.colors.text, letterSpacing: -0.3 },
+  title: { fontWeight: '800', color: Theme.colors.text, letterSpacing: -0.5 },
+  subtitle: { color: Theme.colors.textSecondary, marginTop: 4, marginBottom: 22 },
   roleSwitch: {
     flexDirection: 'row',
-    backgroundColor: Theme.colors.surface,
+    backgroundColor: '#EAEAEA',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
     padding: 4,
     marginBottom: 16,
   },
@@ -130,24 +156,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   roleBtnActive: { backgroundColor: Theme.colors.primary },
-  roleText: { fontWeight: '700', color: Theme.colors.textMuted, textAlign: 'center' },
-  roleTextActive: { color: '#FFFFFF' },
+  roleText: { fontWeight: '700', color: Theme.colors.textSecondary, textAlign: 'center' },
+  roleTextActive: { color: Theme.colors.secondary },
   card: {
     width: '100%',
     backgroundColor: Theme.colors.surface,
     borderRadius: Theme.radius.card,
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
-    padding: 18,
+    padding: 20,
     gap: 10,
   },
   label: { fontSize: 13, fontWeight: '700', color: Theme.colors.text },
   input: {
     width: '100%',
     minHeight: 48,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
+    backgroundColor: Theme.colors.surfaceMuted,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -156,14 +178,15 @@ const styles = StyleSheet.create({
   },
   loginBtn: {
     width: '100%',
-    minHeight: 48,
+    minHeight: 52,
     backgroundColor: Theme.colors.primary,
     borderRadius: Theme.radius.button,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
   },
-  loginBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15, textAlign: 'center' },
+  loginBtnDisabled: { opacity: 0.65 },
+  loginBtnText: { color: Theme.colors.secondary, fontWeight: '700', fontSize: 15, textAlign: 'center' },
 });

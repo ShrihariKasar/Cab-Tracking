@@ -16,9 +16,20 @@ jest.mock('react-native', () => {
   const React = require('react');
   const mockComp = (name: string) => (props: any) => React.createElement(name, props, props.children);
   return {
-    Platform: { OS: 'android', Version: 33, select: (o: any) => o.android },
+    Platform: { OS: 'android', Version: 33, select: (o: any) => o.android || o.default },
     StyleSheet: { create: (s: any) => s, absoluteFillObject: {} },
     useWindowDimensions: () => mockCurrentViewport,
+    Animated: {
+      Value: class {
+        constructor(_v: number) {}
+      },
+      View: mockComp('AnimatedView'),
+      timing: () => ({ start: jest.fn() }),
+      spring: () => ({ start: jest.fn() }),
+      sequence: () => ({ start: jest.fn() }),
+      parallel: () => ({ start: jest.fn() }),
+      loop: () => ({ start: jest.fn(), stop: jest.fn() }),
+    },
     Alert: { alert: jest.fn() },
     Linking: { openSettings: jest.fn() },
     PermissionsAndroid: {
@@ -60,6 +71,12 @@ jest.mock('react-native-safe-area-context', () => {
 jest.mock('react-native-vector-icons/MaterialCommunityIcons', () => {
   const React = require('react');
   return (props: any) => React.createElement('Icon', props);
+});
+
+jest.mock('lucide-react-native', () => {
+  const React = require('react');
+  const stub = (props: any) => React.createElement('LucideIcon', props);
+  return new Proxy({}, { get: () => stub });
 });
 
 jest.mock('react-native-maps', () => {

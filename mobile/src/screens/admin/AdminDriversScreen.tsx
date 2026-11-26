@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Image,
@@ -11,7 +10,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Theme } from '../../config/theme';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { AppIcon } from '../../components/AppIcon';
+import { CustomVehicleMarker } from '../../components/CustomVehicleMarker';
+import { SkeletonCard } from '../../components/SkeletonCard';
+import { StatusPill } from '../../components/StatusPill';
+import { CLEAN_MAP_STYLE, getTimeGreeting, Theme } from '../../config/theme';
 import { api } from '../../services/api';
 import { socketManager } from '../../services/socket';
 import type { DriverListItem } from '../../types';
@@ -77,9 +81,8 @@ export const AdminDriversScreen: React.FC<Props> = ({ onSelectDriver }) => {
   const counts = useMemo(() => {
     const total = drivers.length;
     const activeRides = drivers.filter((d) => d.rideStatus === 'RIDE_STARTED').length;
-    const available = drivers.filter((d) => d.availabilityStatus === 'AVAILABLE').length;
     const offline = drivers.filter((d) => d.availabilityStatus === 'OFFLINE').length;
-    return { total, activeRides, available, offline };
+    return { total, activeRides, offline };
   }, [drivers]);
 
   const filtered = useMemo(() => {
@@ -92,22 +95,77 @@ export const AdminDriversScreen: React.FC<Props> = ({ onSelectDriver }) => {
     );
   }, [drivers, search]);
 
-  return (
-    <View style={[styles.container, { paddingHorizontal: horizontalPadding }]}>
-      <View style={styles.kpiGrid}>
-        <KpiBox label="Total Drivers" value={counts.total} color={Theme.colors.primary} compact={isSmallPhone} />
-        <KpiBox label="Active Rides" value={counts.activeRides} color={Theme.colors.green} compact={isSmallPhone} />
-        <KpiBox label="Available" value={counts.available} color={Theme.colors.primary} compact={isSmallPhone} />
-        <KpiBox label="Offline" value={counts.offline} color={Theme.colors.red} compact={isSmallPhone} />
+  const mapDrivers = drivers.filter((d) => d.latitude && d.longitude);
+
+  const listHeader = (
+    <View style={styles.headerBlock}>
+      {/* Top Fleet Header */}
+      <View style={styles.topRow}>
+        <View style={styles.brandRow}>
+          <View style={styles.logoBadge}>
+            <AppIcon name="car" size={18} color="#FFFFFF" />
+          </View>
+          <View style={styles.flexText}>
+            <Text style={styles.greeting}>{getTimeGreeting()}</Text>
+            <Text style={[styles.companyTitle, { fontSize: scaleFont(20) }]}>FleetPulse</Text>
+          </View>
+        </View>
+        <TouchableOpacity
+          style={styles.iconCircle}
+          onPress={() => Alert.alert('Fleet Alerts', 'Real-time ride alerts are active.')}
+        >
+          <AppIcon name="bell" size={18} color={Theme.colors.text} />
+        </TouchableOpacity>
       </View>
 
-      <TextInput
-        value={search}
-        onChangeText={setSearch}
-        placeholder="Search by driver name or vehicle reg..."
-        placeholderTextColor={Theme.colors.textMuted}
-        style={styles.search}
-      />
+      {/* Live Fleet Map Preview */}
+      <View style={[styles.mapPreviewCard, Theme.shadow.card]}>
+        <MapView
+          provider={PROVIDER_GOOGLE}
+          style={styles.mapPreview}
+          customMapStyle={CLEAN_MAP_STYLE}
+          initialRegion={{
+            latitude: mapDrivers[0]?.latitude || 12.9716,
+            longitude: mapDrivers[0]?.longitude || 77.5946,
+            latitudeDelta: 0.04,
+            longitudeDelta: 0.04,
+          }}
+        >
+          {mapDrivers.map((d) => (
+            <Marker
+              key={d.id}
+              coordinate={{ latitude: d.latitude!, longitude: d.longitude! }}
+              anchor={{ x: 0.5, y: 0.5 }}
+            >
+              <CustomVehicleMarker active={d.rideStatus === 'RIDE_STARTED'} offline={d.availabilityStatus === 'OFFLINE'} />
+            </Marker>
+          ))}
+        </MapView>
+        <View style={styles.mapTag}>
+          <StatusPill icon="navigation" label="Live Fleet Preview" tone="neutral" />
+        </View>
+      </View>
+
+      {/* 3 Stat Cards */}
+      <View style={styles.statsRow}>
+        <StatCard label="Active Rides" value={counts.activeRides} color={Theme.colors.success} />
+        <StatCard label="Total Drivers" value={counts.total} color={Theme.colors.primary} />
+        <StatCard label="Offline" value={counts.offline} color={Theme.colors.error} />
+      </View>
+
+      {/* Search Bar */}
+      <View style={[styles.searchBox, Theme.shadow.card]}>
+        <AppIcon name="search" size={18} color={Theme.colors.textSecondary} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search driver or vehicle reg..."
+          placeholderTextColor={Theme.colors.textSecondary}
+          style={styles.searchInput}
+        />
+      </View>
+
+      <Text style={styles.sectionTitle}>Fleet Drivers</Text>
 
       {error ? (
         <View style={styles.errorBox}>
@@ -117,16 +175,24 @@ export const AdminDriversScreen: React.FC<Props> = ({ onSelectDriver }) => {
           </TouchableOpacity>
         </View>
       ) : null}
+    </View>
+  );
 
+  return (
+    <View style={[styles.container, { paddingHorizontal: horizontalPadding }]}>
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={Theme.colors.primary} />
+        <View style={styles.skeletonWrap}>
+          {listHeader}
+          <SkeletonCard />
+          <SkeletonCard />
         </View>
       ) : (
         <FlatList
           data={filtered}
           keyExtractor={(d) => d.id}
+          ListHeaderComponent={listHeader}
           contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -136,16 +202,15 @@ export const AdminDriversScreen: React.FC<Props> = ({ onSelectDriver }) => {
               }}
             />
           }
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No drivers match your search.</Text>
-          }
+          ListEmptyComponent={<Text style={styles.emptyText}>No drivers match your search.</Text>}
           renderItem={({ item }) => {
             const isOnline = item.availabilityStatus !== 'OFFLINE';
             const isRideStarted = item.rideStatus === 'RIDE_STARTED';
             return (
               <TouchableOpacity
+                activeOpacity={0.75}
                 onPress={() => onSelectDriver(item)}
-                style={[styles.card, isSmallPhone && styles.cardColumn]}
+                style={[styles.card, Theme.shadow.card, isSmallPhone && styles.cardColumn]}
               >
                 {item.photoUrl ? (
                   <Image source={{ uri: item.photoUrl }} style={styles.avatar} />
@@ -160,17 +225,20 @@ export const AdminDriversScreen: React.FC<Props> = ({ onSelectDriver }) => {
                     {item.vehicleRegistration || 'No Vehicle'} • {item.vehicleModel || '-'}
                   </Text>
                   <View style={styles.badges}>
-                    <Text style={[styles.badge, { color: isOnline ? Theme.colors.green : Theme.colors.red }]}>
-                      {isOnline ? 'Online' : 'Offline'}
-                    </Text>
-                    <Text style={[styles.badge, { color: isRideStarted ? Theme.colors.green : Theme.colors.textMuted }]}>
-                      {isRideStarted ? 'Ride Started' : 'Ride Not Started'}
+                    <StatusPill
+                      icon={isRideStarted ? 'navigation' : 'clock'}
+                      label={isRideStarted ? 'Active Ride' : isOnline ? 'Available' : 'Offline'}
+                      tone={isRideStarted ? 'success' : isOnline ? 'neutral' : 'error'}
+                    />
+                  </View>
+                  <View style={styles.timeRow}>
+                    <AppIcon name="clock" size={12} color={Theme.colors.textSecondary} />
+                    <Text style={styles.time}>
+                      {item.capturedAt ? new Date(item.capturedAt).toLocaleTimeString() : 'No GPS yet'}
                     </Text>
                   </View>
-                  <Text style={styles.time}>
-                    Last update: {item.capturedAt ? new Date(item.capturedAt).toLocaleTimeString() : 'Never'}
-                  </Text>
                 </View>
+                {!isSmallPhone ? <AppIcon name="chevron-right" size={18} color={Theme.colors.textSecondary} /> : null}
               </TouchableOpacity>
             );
           }}
@@ -180,62 +248,83 @@ export const AdminDriversScreen: React.FC<Props> = ({ onSelectDriver }) => {
   );
 };
 
-const KpiBox: React.FC<{ label: string; value: number; color: string; compact: boolean }> = ({
-  label,
-  value,
-  color,
-  compact,
-}) => (
-  <View style={[styles.kpiBox, compact && styles.kpiBoxHalf]}>
-    <Text style={[styles.kpiVal, { color }]}>{value}</Text>
-    <Text style={styles.kpiLbl}>{label}</Text>
+const StatCard: React.FC<{ label: string; value: number; color: string }> = ({ label, value, color }) => (
+  <View style={[styles.statCard, Theme.shadow.card]}>
+    <Text style={[styles.statVal, { color }]}>{value}</Text>
+    <Text style={styles.statLbl}>{label}</Text>
   </View>
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Theme.colors.background, paddingTop: 12 },
-  kpiGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 },
-  kpiBox: {
-    flex: 1,
-    minWidth: 74,
+  container: { flex: 1, backgroundColor: Theme.colors.background },
+  skeletonWrap: { flex: 1 },
+  headerBlock: { paddingTop: 12, gap: 12, marginBottom: 8 },
+  topRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  brandRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logoBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: Theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  flexText: { flex: 1, flexShrink: 1 },
+  greeting: { fontSize: 12, color: Theme.colors.textSecondary, fontWeight: '600' },
+  companyTitle: { fontWeight: '800', color: Theme.colors.text, letterSpacing: -0.4 },
+  iconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: Theme.colors.surface,
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapPreviewCard: {
+    width: '100%',
+    height: 150,
+    borderRadius: Theme.radius.card,
+    overflow: 'hidden',
+    backgroundColor: '#E5E5E5',
+    position: 'relative',
+  },
+  mapPreview: { ...StyleSheet.absoluteFillObject },
+  mapTag: { position: 'absolute', top: 10, left: 10 },
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statCard: {
+    flex: 1,
+    minWidth: 92,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: 'center',
   },
-  kpiBoxHalf: { minWidth: '47%' },
-  kpiVal: { fontSize: 20, fontWeight: '800' },
-  kpiLbl: { fontSize: 12, color: Theme.colors.textMuted, marginTop: 2, textAlign: 'center' },
-  search: {
-    width: '100%',
-    minHeight: 48,
+  statVal: { fontSize: 20, fontWeight: '800' },
+  statLbl: { fontSize: 11, color: Theme.colors.textSecondary, marginTop: 2, textAlign: 'center', fontWeight: '600' },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Theme.colors.surface,
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: Theme.colors.text,
-    marginBottom: 12,
+    minHeight: 48,
+    gap: 10,
   },
-  listContent: { paddingBottom: 24, gap: 12, flexGrow: 1 },
+  searchInput: { flex: 1, fontSize: 14, color: Theme.colors.text, paddingVertical: 10 },
+  sectionTitle: { fontSize: 15, fontWeight: '800', color: Theme.colors.text, marginTop: 2 },
+  listContent: { paddingBottom: 24, gap: 10, flexGrow: 1 },
   card: {
     width: '100%',
     flexDirection: 'row',
     backgroundColor: Theme.colors.surface,
     borderRadius: Theme.radius.card,
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
     padding: 14,
     gap: 12,
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   cardColumn: { flexDirection: 'column', alignItems: 'flex-start' },
-  cardBody: { flex: 1, flexShrink: 1, width: '100%' },
+  cardBody: { flex: 1, flexShrink: 1, width: '100%', gap: 4 },
   avatar: { width: 48, height: 48, borderRadius: 24 },
   avatarPlaceholder: {
     width: 48,
@@ -245,27 +334,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  initials: { color: '#FFFFFF', fontWeight: '800' },
+  initials: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
   name: { fontWeight: '700', color: Theme.colors.text, flexShrink: 1 },
-  meta: { fontSize: 13, color: Theme.colors.textMuted, marginTop: 2, flexShrink: 1 },
-  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 6 },
-  badge: { fontSize: 12, fontWeight: '700' },
-  time: { fontSize: 12, color: Theme.colors.textMuted, marginTop: 4 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { textAlign: 'center', color: Theme.colors.textMuted, marginTop: 32, fontSize: 14 },
+  meta: { fontSize: 13, color: Theme.colors.textSecondary, flexShrink: 1 },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 2 },
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
+  time: { fontSize: 12, color: Theme.colors.textSecondary },
+  emptyText: { textAlign: 'center', color: Theme.colors.textSecondary, marginTop: 24, fontSize: 14 },
   errorBox: {
-    padding: 12,
+    padding: 14,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Theme.colors.red,
-    marginBottom: 12,
+    backgroundColor: '#FEE2E2',
     gap: 8,
   },
-  errorText: { color: Theme.colors.red, fontWeight: '600', fontSize: 13 },
+  errorText: { color: Theme.colors.error, fontWeight: '600', fontSize: 13 },
   retryBtn: {
     minHeight: 44,
     backgroundColor: Theme.colors.primary,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },

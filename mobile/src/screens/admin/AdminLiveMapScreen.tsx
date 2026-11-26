@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { AnimatedRegion, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Theme } from '../../config/theme';
+import { AppIcon } from '../../components/AppIcon';
+import { CustomVehicleMarker } from '../../components/CustomVehicleMarker';
+import { FloatingBottomSheet } from '../../components/FloatingBottomSheet';
+import { StatusPill } from '../../components/StatusPill';
+import { CLEAN_MAP_STYLE, Theme } from '../../config/theme';
 import { api } from '../../services/api';
 import { socketManager } from '../../services/socket';
 import { useResponsive } from '../../utils/responsive';
@@ -12,6 +15,7 @@ interface DriverLocationPayload {
   driverId: string;
   driverName: string;
   vehicleRegistration?: string | null;
+  vehicleModel?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   capturedAt?: string | null;
@@ -19,6 +23,7 @@ interface DriverLocationPayload {
   internetConnected?: boolean;
   gpsEnabled?: boolean;
   rideStatus?: string | null;
+  rideStartTime?: string | null;
 }
 
 export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void }> = ({
@@ -26,7 +31,7 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
   onBack,
 }) => {
   const insets = useSafeAreaInsets();
-  const { horizontalPadding, height } = useResponsive();
+  const { horizontalPadding, height, scaleFont } = useResponsive();
   const [info, setInfo] = useState<DriverLocationPayload | null>(null);
   const [stale, setStale] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -137,6 +142,7 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={styles.map}
+        customMapStyle={CLEAN_MAP_STYLE}
         initialRegion={{
           latitude: info?.latitude || 12.9716,
           longitude: info?.longitude || 77.5946,
@@ -146,110 +152,166 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
       >
         {info?.latitude && info?.longitude ? (
           <Marker.Animated coordinate={animatedCoord as any} anchor={{ x: 0.5, y: 0.5 }}>
-            <View
-              style={[
-                styles.carMarker,
-                { backgroundColor: isOfflineOrStale ? Theme.colors.red : Theme.colors.primary },
-              ]}
-            >
-              <Icon name="car" size={22} color="#FFFFFF" />
-            </View>
+            <CustomVehicleMarker active={!isOfflineOrStale} offline={isOfflineOrStale} />
           </Marker.Animated>
         ) : null}
       </MapView>
 
-      {/* Top safe-area controls: Back on left, Recenter on right so neither overlaps the bottom sheet */}
-      <View style={[styles.topBar, { top: Math.max(insets.top, 12), paddingHorizontal: horizontalPadding }]}>
-        <TouchableOpacity onPress={onBack} style={styles.mapIconBtn} accessibilityLabel="Back">
-          <Icon name="arrow-left" size={22} color={Theme.colors.text} />
+      {/* Top Floating Panel */}
+      <View
+        style={[
+          styles.topBar,
+          { top: Math.max(insets.top, 12), paddingHorizontal: horizontalPadding },
+        ]}
+      >
+        <TouchableOpacity onPress={onBack} style={[styles.mapIconBtn, Theme.shadow.floating]} accessibilityLabel="Back">
+          <AppIcon name="arrow-left" size={20} color={Theme.colors.text} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={recenter} style={styles.mapIconBtn} accessibilityLabel="Recenter map">
-          <Icon name="crosshairs-gps" size={22} color={Theme.colors.primary} />
+
+        <View style={[styles.topPillCard, Theme.shadow.floating]}>
+          <View style={styles.flexText}>
+            <Text style={styles.topDriverName} numberOfLines={1}>
+              {info?.driverName || 'Loading...'}
+            </Text>
+            <Text style={styles.topVehicle}>{info?.vehicleRegistration || 'Cab'}</Text>
+          </View>
+          <StatusPill
+            label={isOfflineOrStale ? 'Offline' : 'LIVE'}
+            tone={isOfflineOrStale ? 'error' : 'success'}
+          />
+        </View>
+
+        <TouchableOpacity onPress={recenter} style={[styles.mapIconBtn, Theme.shadow.floating]} accessibilityLabel="Recenter">
+          <AppIcon name="crosshair" size={20} color={Theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
-      <View
-        style={[
-          styles.bottomCard,
-          {
-            bottom: Math.max(insets.bottom, 12),
-            left: horizontalPadding,
-            right: horizontalPadding,
-            maxHeight: Math.round(height * 0.42),
-          },
-        ]}
+      {/* Bottom Floating Sheet */}
+      <FloatingBottomSheet
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingBottom: Math.max(insets.bottom, 18),
+          paddingHorizontal: horizontalPadding,
+          maxHeight: Math.round(height * 0.44),
+        }}
       >
         <ScrollView showsVerticalScrollIndicator={false}>
           {loadError ? <Text style={styles.staleWarn}>{loadError}</Text> : null}
-          <View style={styles.rowBetween}>
-            <Text style={styles.driverName}>{info?.driverName || 'Loading...'}</Text>
-            <Text style={[styles.badge, { color: isOfflineOrStale ? Theme.colors.red : Theme.colors.green }]}>
-              {isOfflineOrStale ? 'Last known location' : 'LIVE'}
-            </Text>
+
+          <View style={styles.driverRow}>
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.initials}>{(info?.driverName || 'DR').slice(0, 2).toUpperCase()}</Text>
+            </View>
+            <View style={styles.flexText}>
+              <Text style={[styles.sheetName, { fontSize: scaleFont(18) }]}>{info?.driverName || 'Driver'}</Text>
+              <Text style={styles.sheetVehicle}>
+                {info?.vehicleRegistration || '-'} {info?.vehicleModel ? `• ${info.vehicleModel}` : ''}
+              </Text>
+            </View>
+            <StatusPill
+              icon={isOfflineOrStale ? 'alert' : 'navigation'}
+              label={isOfflineOrStale ? 'Last known location' : 'Live GPS'}
+              tone={isOfflineOrStale ? 'error' : 'success'}
+            />
           </View>
-          <Text style={styles.meta}>Vehicle: {info?.vehicleRegistration || '-'}</Text>
-          <Text style={styles.meta}>
-            Last captured: {info?.capturedAt ? new Date(info.capturedAt).toLocaleString() : 'Unavailable'}
-          </Text>
-          <Text style={styles.meta}>
-            GPS: {info?.gpsEnabled === false ? 'Unavailable' : 'Active'} • Internet:{' '}
-            {info?.internetConnected === false ? 'Offline' : 'Connected'}
-          </Text>
+
+          <View style={styles.divider} />
+
+          <View style={styles.metaGrid}>
+            <MetaItem
+              icon="clock"
+              label="Last GPS"
+              value={info?.capturedAt ? new Date(info.capturedAt).toLocaleTimeString() : 'Unavailable'}
+            />
+            <MetaItem
+              icon="navigation"
+              label="Ride Started"
+              value={info?.rideStartTime ? new Date(info.rideStartTime).toLocaleTimeString() : 'Active'}
+            />
+            <MetaItem
+              icon={info?.internetConnected === false ? 'wifi-off' : 'wifi'}
+              label="Internet"
+              value={info?.internetConnected === false ? 'Offline' : 'Connected'}
+            />
+            <MetaItem
+              icon="location"
+              label="GPS Signal"
+              value={info?.gpsEnabled === false ? 'Unavailable' : 'Active'}
+            />
+          </View>
+
           {isOfflineOrStale ? (
-            <Text style={styles.staleWarn}>Location not updating — showing last known position</Text>
+            <Text style={styles.staleWarn}>
+              Location not updating — showing last known position
+            </Text>
           ) : null}
         </ScrollView>
-      </View>
+      </FloatingBottomSheet>
     </View>
   );
 };
 
+const MetaItem: React.FC<{ icon: any; label: string; value: string }> = ({ icon, label, value }) => (
+  <View style={styles.metaItem}>
+    <AppIcon name={icon} size={14} color={Theme.colors.textSecondary} />
+    <View style={styles.flexText}>
+      <Text style={styles.metaLabel}>{label}</Text>
+      <Text style={styles.metaVal}>{value}</Text>
+    </View>
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { ...StyleSheet.absoluteFillObject },
-  carMarker: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
   topBar: {
     position: 'absolute',
     left: 0,
     right: 0,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
   mapIconBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 4,
   },
-  bottomCard: {
-    position: 'absolute',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    elevation: 6,
-  },
-  rowBetween: {
+  topPillCard: {
+    flex: 1,
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     gap: 8,
-    marginBottom: 4,
   },
-  driverName: { fontSize: 17, fontWeight: '800', color: Theme.colors.text, flexShrink: 1 },
-  badge: { fontSize: 12, fontWeight: '800' },
-  meta: { fontSize: 13, color: Theme.colors.textMuted, marginTop: 2, flexShrink: 1 },
-  staleWarn: { fontSize: 12, fontWeight: '700', color: Theme.colors.red, marginTop: 6 },
+  flexText: { flex: 1, flexShrink: 1 },
+  topDriverName: { fontSize: 13, fontWeight: '800', color: Theme.colors.text },
+  topVehicle: { fontSize: 11, color: Theme.colors.textSecondary },
+  driverRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
+  avatarPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initials: { color: '#FFFFFF', fontWeight: '800', fontSize: 15 },
+  sheetName: { fontWeight: '800', color: Theme.colors.text },
+  sheetVehicle: { fontSize: 13, color: Theme.colors.textSecondary, marginTop: 2 },
+  divider: { height: 1, backgroundColor: Theme.colors.border, marginVertical: 12 },
+  metaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  metaItem: { width: '47%', flexDirection: 'row', alignItems: 'center', gap: 8 },
+  metaLabel: { fontSize: 11, color: Theme.colors.textSecondary },
+  metaVal: { fontSize: 13, fontWeight: '700', color: Theme.colors.text },
+  staleWarn: { fontSize: 12, fontWeight: '700', color: Theme.colors.error, marginTop: 10 },
 });

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { AppIcon, IconName } from '../components/AppIcon';
 import { Theme } from '../config/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginScreen } from '../screens/LoginScreen';
@@ -12,7 +12,7 @@ import { AdminLiveMapScreen } from '../screens/admin/AdminLiveMapScreen';
 import { AdminProfileScreen } from '../screens/admin/AdminProfileScreen';
 import { DriverDashboardScreen } from '../screens/driver/DriverDashboardScreen';
 import { DriverProfileScreen } from '../screens/driver/DriverProfileScreen';
-import { DriverListItem } from '../types';
+import type { DriverListItem } from '../types';
 
 export const AppNavigator: React.FC = () => {
   const { user, loading } = useAuth();
@@ -34,13 +34,13 @@ export const AppNavigator: React.FC = () => {
 
   if (user.role === 'DRIVER') {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.safe} edges={['left', 'right']}>
         <View style={styles.content}>
           {driverTab === 'home' ? <DriverDashboardScreen /> : <DriverProfileScreen />}
         </View>
         <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
           <TabBtn label="Home" icon="home" active={driverTab === 'home'} onPress={() => setDriverTab('home')} />
-          <TabBtn label="Profile" icon="account" active={driverTab === 'profile'} onPress={() => setDriverTab('profile')} />
+          <TabBtn label="Profile" icon="user" active={driverTab === 'profile'} onPress={() => setDriverTab('profile')} />
         </View>
       </SafeAreaView>
     );
@@ -70,23 +70,23 @@ export const AppNavigator: React.FC = () => {
         {adminTab === 'profile' && <AdminProfileScreen />}
       </View>
       <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-        <TabBtn label="Drivers" icon="account-group" active={adminTab === 'drivers'} onPress={() => setAdminTab('drivers')} />
-        <TabBtn label="Active Rides" icon="car-connected" active={adminTab === 'activeRides'} onPress={() => setAdminTab('activeRides')} />
-        <TabBtn label="Profile" icon="account" active={adminTab === 'profile'} onPress={() => setAdminTab('profile')} />
+        <TabBtn label="Drivers" icon="users" active={adminTab === 'drivers'} onPress={() => setAdminTab('drivers')} />
+        <TabBtn label="Active Rides" icon="car" active={adminTab === 'activeRides'} onPress={() => setAdminTab('activeRides')} />
+        <TabBtn label="Profile" icon="user" active={adminTab === 'profile'} onPress={() => setAdminTab('profile')} />
       </View>
     </SafeAreaView>
   );
 };
 
-const TabBtn: React.FC<{ label: string; icon: string; active: boolean; onPress: () => void }> = ({
+const TabBtn: React.FC<{ label: string; icon: IconName; active: boolean; onPress: () => void }> = ({
   label,
   icon,
   active,
   onPress,
 }) => (
   <TouchableOpacity onPress={onPress} style={styles.tab}>
-    <Icon name={icon} size={22} color={active ? Theme.colors.primary : Theme.colors.textMuted} />
-    <Text style={[styles.tabLabel, { color: active ? Theme.colors.primary : Theme.colors.textMuted }]}>
+    <AppIcon name={icon} size={20} color={active ? Theme.colors.primary : Theme.colors.textSecondary} />
+    <Text style={[styles.tabLabel, { color: active ? Theme.colors.primary : Theme.colors.textSecondary }]}>
       {label}
     </Text>
   </TouchableOpacity>
@@ -100,9 +100,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: Theme.colors.border,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Theme.colors.secondary,
     paddingTop: 8,
-    minHeight: 56,
+    minHeight: 58,
   },
   tab: {
     flex: 1,
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 4,
-    gap: 2,
+    gap: 3,
   },
-  tabLabel: { fontSize: 12, fontWeight: '700', textAlign: 'center', flexShrink: 1 },
+  tabLabel: { fontSize: 11, fontWeight: '700', textAlign: 'center', flexShrink: 1 },
 });
