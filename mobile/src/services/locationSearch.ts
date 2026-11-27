@@ -62,6 +62,7 @@ export async function searchPlaces(
       const coords = f.geometry?.coordinates;
       const props = f.properties;
       if (!coords || coords.length < 2 || !props) continue;
+      if (!Number.isFinite(coords[0]) || !Number.isFinite(coords[1])) continue;
       const label = formatPhotonLabel(props);
       if (!label) continue;
       const key = `${coords[1].toFixed(4)},${coords[0].toFixed(4)}`;

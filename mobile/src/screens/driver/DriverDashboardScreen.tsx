@@ -69,6 +69,8 @@ export const DriverDashboardScreen: React.FC = () => {
     setSuggestions([]);
     Keyboard?.dismiss?.();
     try {
+      const hasPerm = await gpsService.checkAndRequestPermissions();
+      if (!hasPerm) return;
       const coords = gps.lastCapturedLocation || (await gpsService.getCurrentPosition());
       const addr = await reverseGeocode(coords.latitude, coords.longitude);
       setPickupAddress(addr);

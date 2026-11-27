@@ -203,7 +203,7 @@ class GpsService {
               capturedAt: new Date(pos.timestamp).toISOString(),
             };
             this.state.lastCapturedLocation = pt;
-            this.dispatchLocation(pt);
+            this.dispatchLocation(pt).catch(() => {});
           },
           () => {
             this.state.gpsEnabled = false;
@@ -279,16 +279,20 @@ class GpsService {
       return;
     }
 
-    const socket = await socketManager.connect();
-    if (socket?.connected) {
-      socket.emit('driver:location:update', pt);
-      this.state.lastSyncedAt = new Date().toISOString();
-      this.state.statusMessage = null;
-      this.emit();
-      if (this.queue.length > 0) {
-        await this.flushQueue();
+    try {
+      const socket = await socketManager.connect();
+      if (socket?.connected) {
+        socket.emit('driver:location:update', pt);
+        this.state.lastSyncedAt = new Date().toISOString();
+        this.state.statusMessage = null;
+        this.emit();
+        if (this.queue.length > 0) {
+          await this.flushQueue();
+        }
+        return;
       }
-      return;
+    } catch {
+      // Fall back to REST or queue below
     }
 
     // Fallback to REST or queue if offline

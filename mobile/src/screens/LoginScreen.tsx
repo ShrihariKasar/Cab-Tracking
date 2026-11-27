@@ -164,7 +164,10 @@ export const LoginScreen: React.FC = () => {
               <TouchableOpacity
                 key={r}
                 activeOpacity={0.85}
-                onPress={() => setRole(r)}
+                onPress={() => {
+                  setRole(r);
+                  if (r === 'ADMIN') setMode('LOGIN');
+                }}
                 style={[styles.roleBtn, role === r && styles.roleBtnActive]}
               >
                 <Text style={[styles.roleText, role === r && styles.roleTextActive]}>
@@ -195,7 +198,7 @@ export const LoginScreen: React.FC = () => {
               style={styles.input}
             />
 
-            {mode === 'LOGIN' ? (
+            {role === 'ADMIN' || mode === 'LOGIN' ? (
               <TouchableOpacity
                 activeOpacity={0.85}
                 disabled={busy}

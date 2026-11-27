@@ -82,8 +82,9 @@ android {
         applicationId "com.fleetpulse"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        def ciRunNum = System.getenv("GITHUB_RUN_NUMBER")?.isInteger() ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 0
+        versionCode (ciRunNum + 10)
+        versionName "1.0.${ciRunNum}"
         manifestPlaceholders = [GOOGLE_MAPS_API_KEY: System.getenv("GOOGLE_MAPS_API_KEY") ?: (project.findProperty("GOOGLE_MAPS_API_KEY") ?: "")]
     }
     signingConfigs {
