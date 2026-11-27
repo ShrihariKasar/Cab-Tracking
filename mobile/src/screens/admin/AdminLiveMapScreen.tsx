@@ -165,8 +165,8 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
       <MapView
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
+        mapType="none"
         style={styles.map}
-        customMapStyle={CLEAN_MAP_STYLE}
         initialRegion={{
           latitude: info?.latitude || 12.9716,
           longitude: info?.longitude || 77.5946,
@@ -185,7 +185,7 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
           </Marker.Animated>
         ) : null}
         {routeCoords.length > 1 ? (
-          <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
+          <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={5} zIndex={1} />
         ) : null}
         {info?.startLatitude && info?.startLongitude ? (
           <Marker

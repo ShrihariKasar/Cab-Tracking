@@ -285,8 +285,8 @@ export const DriverDashboardScreen: React.FC = () => {
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
+          mapType="none"
           style={styles.map}
-          customMapStyle={CLEAN_MAP_STYLE}
           initialRegion={{ latitude: lat, longitude: lng, latitudeDelta: 0.012, longitudeDelta: 0.012 }}
         >
           <UrlTile
@@ -295,7 +295,7 @@ export const DriverDashboardScreen: React.FC = () => {
             zIndex={-1}
           />
           {routeCoords.length > 1 ? (
-            <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
+            <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={5} zIndex={1} />
           ) : null}
           {rideStarted && startCoords ? (
             <Marker coordinate={startCoords} title="Start" description={pickupAddress || 'Start'} pinColor="green" />
