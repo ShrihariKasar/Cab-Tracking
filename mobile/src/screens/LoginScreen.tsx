@@ -281,7 +281,7 @@ export const LoginScreen: React.FC = () => {
                 style={styles.serverToggle}
               >
                 <Text style={styles.serverToggleText}>
-                  {mode === 'LOGIN' ? 'New Driver? Register with Age Verification' : 'Back to Sign In'}
+                  {mode === 'LOGIN' ? 'New Register' : 'Back to Sign In'}
                 </Text>
               </TouchableOpacity>
             ) : null}

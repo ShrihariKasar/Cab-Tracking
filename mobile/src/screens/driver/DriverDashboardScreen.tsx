@@ -1,5 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Animated, Image, Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  Alert,
+  Animated,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Linking,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/AppIcon';
@@ -10,7 +24,7 @@ import { CLEAN_MAP_STYLE, getTimeGreeting, Theme } from '../../config/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { gpsService, type GpsStatusSnapshot } from '../../services/gpsService';
-import { searchPlaces, type PlaceSuggestion } from '../../services/locationSearch';
+import { reverseGeocode, searchPlaces, type PlaceSuggestion } from '../../services/locationSearch';
 import { useResponsive } from '../../utils/responsive';
 import { fetchRoadRoute, type LatLngPoint } from '../../utils/routing';
 
@@ -37,14 +51,30 @@ export const DriverDashboardScreen: React.FC = () => {
     }
     setActiveField(field);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    if (text.trim().length < 3) {
+    if (text.trim().length < 2) {
       setSuggestions([]);
       return;
     }
+    const near = gps.lastCapturedLocation
+      ? { latitude: gps.lastCapturedLocation.latitude, longitude: gps.lastCapturedLocation.longitude }
+      : undefined;
     searchTimerRef.current = setTimeout(async () => {
-      const results = await searchPlaces(text);
+      const results = await searchPlaces(text, near);
       setSuggestions(results);
-    }, 350);
+    }, 300);
+  };
+
+  const handleUseCurrentLocation = async () => {
+    setActiveField(null);
+    setSuggestions([]);
+    Keyboard?.dismiss?.();
+    try {
+      const coords = gps.lastCapturedLocation || (await gpsService.getCurrentPosition());
+      const addr = await reverseGeocode(coords.latitude, coords.longitude);
+      setPickupAddress(addr);
+    } catch {
+      setPickupAddress('Current GPS Location');
+    }
   };
 
   const selectSuggestion = (item: PlaceSuggestion) => {
@@ -56,6 +86,7 @@ export const DriverDashboardScreen: React.FC = () => {
     }
     setSuggestions([]);
     setActiveField(null);
+    Keyboard?.dismiss?.();
   };
   const statusScale = useRef(new Animated.Value(1)).current;
 
@@ -159,7 +190,10 @@ export const DriverDashboardScreen: React.FC = () => {
   }, [destCoords, lat, lng]);
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       {/* Top Floating Header */}
       <View
         style={[
@@ -191,7 +225,7 @@ export const DriverDashboardScreen: React.FC = () => {
       </View>
 
       {/* Main Map Area */}
-      <View style={styles.mapContainer}>
+      <View style={[styles.mapContainer, activeField ? styles.mapContainerCompact : null]}>
         <MapView
           provider={PROVIDER_GOOGLE}
           style={styles.map}
@@ -256,23 +290,44 @@ export const DriverDashboardScreen: React.FC = () => {
 
         {!rideStarted ? (
           <View style={styles.routeInputGroup}>
-            <TextInput
-              value={pickupAddress}
-              onChangeText={(t) => handlePlaceType('pickup', t)}
-              placeholder="From (type to search or leave blank for GPS)"
-              placeholderTextColor={Theme.colors.textSecondary}
-              style={styles.routeInput}
-            />
+            <View style={styles.pickupRow}>
+              <TextInput
+                value={pickupAddress}
+                onFocus={() => setActiveField('pickup')}
+                onChangeText={(t) => handlePlaceType('pickup', t)}
+                placeholder="From (village, shop, or leave blank for GPS)"
+                placeholderTextColor={Theme.colors.textSecondary}
+                style={[styles.routeInput, styles.pickupInputFlex]}
+              />
+              <TouchableOpacity
+                onPress={handleUseCurrentLocation}
+                style={styles.gpsNowBtn}
+                accessibilityLabel="Use my current location"
+              >
+                <AppIcon name="crosshair" size={18} color={Theme.colors.primary} />
+              </TouchableOpacity>
+            </View>
             <TextInput
               value={destinationAddress}
+              onFocus={() => setActiveField('dest')}
               onChangeText={(t) => handlePlaceType('dest', t)}
-              placeholder="To (type destination e.g. Pune Airport)"
+              placeholder="To (village, shop, city e.g. Pune)"
               placeholderTextColor={Theme.colors.textSecondary}
               style={styles.routeInput}
             />
+            {activeField === 'pickup' && suggestions.length === 0 ? (
+              <TouchableOpacity onPress={handleUseCurrentLocation} style={styles.currentLocBanner}>
+                <AppIcon name="navigation" size={14} color={Theme.colors.primary} />
+                <Text style={styles.currentLocText}>Use My Current GPS Location</Text>
+              </TouchableOpacity>
+            ) : null}
             {suggestions.length > 0 ? (
-              <View style={styles.suggestionsBox}>
-                {suggestions.slice(0, 4).map((s) => (
+              <ScrollView
+                style={styles.suggestionsBox}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled
+              >
+                {suggestions.slice(0, 6).map((s) => (
                   <TouchableOpacity
                     key={s.placeId}
                     onPress={() => selectSuggestion(s)}
@@ -282,7 +337,7 @@ export const DriverDashboardScreen: React.FC = () => {
                     <Text style={styles.suggestionText}>{s.displayName}</Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+              </ScrollView>
             ) : null}
             <TouchableOpacity
               activeOpacity={0.85}
@@ -312,7 +367,7 @@ export const DriverDashboardScreen: React.FC = () => {
           </View>
         )}
       </FloatingBottomSheet>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -352,6 +407,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   mapContainer: { flex: 1, minHeight: 140, position: 'relative' },
+  mapContainerCompact: { flex: 0, height: 80, minHeight: 80 },
   map: { ...StyleSheet.absoluteFillObject },
   mapOverlayPills: {
     position: 'absolute',
@@ -374,6 +430,26 @@ const styles = StyleSheet.create({
   syncRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
   syncText: { fontSize: 12, color: Theme.colors.textSecondary, flexShrink: 1 },
   routeInputGroup: { width: '100%', gap: 8 },
+  pickupRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  pickupInputFlex: { flex: 1 },
+  gpsNowBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: Theme.colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  currentLocBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: Theme.colors.surfaceMuted,
+    borderRadius: 10,
+  },
+  currentLocText: { fontSize: 13, fontWeight: '700', color: Theme.colors.text },
   routeInput: {
     width: '100%',
     minHeight: 44,
@@ -387,11 +463,11 @@ const styles = StyleSheet.create({
   routeSummaryText: { fontSize: 13, fontWeight: '700', color: Theme.colors.text, marginBottom: 4 },
   suggestionsBox: {
     width: '100%',
+    maxHeight: 165,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: Theme.colors.border,
     borderRadius: 10,
-    overflow: 'hidden',
   },
   suggestionItem: {
     flexDirection: 'row',

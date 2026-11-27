@@ -188,36 +188,41 @@ class GpsService {
       if (this.watchId !== null) {
         Geolocation.clearWatch(this.watchId);
       }
-      this.watchId = Geolocation.watchPosition(
-        (pos) => {
-          this.state.gpsEnabled = true;
-          const now = Date.now();
-          if (now - this.lastEmitMs < 4500) return;
-          this.lastEmitMs = now;
+      try {
+        this.watchId = Geolocation.watchPosition(
+          (pos) => {
+            this.state.gpsEnabled = true;
+            const now = Date.now();
+            if (now - this.lastEmitMs < 4500) return;
+            this.lastEmitMs = now;
 
-          const pt: GpsPoint = {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracy: pos.coords.accuracy ?? 0,
-            capturedAt: new Date(pos.timestamp).toISOString(),
-          };
-          this.state.lastCapturedLocation = pt;
-          this.dispatchLocation(pt);
-        },
-        () => {
-          this.state.gpsEnabled = false;
-          this.state.statusMessage = 'GPS unavailable';
-          this.emit();
-        },
-        {
-          enableHighAccuracy: true,
-          distanceFilter: 10,
-          interval: 5000,
-          fastestInterval: 4000,
-          showsBackgroundLocationIndicator: true,
-          forceRequestLocation: true,
-        }
-      );
+            const pt: GpsPoint = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy ?? 0,
+              capturedAt: new Date(pos.timestamp).toISOString(),
+            };
+            this.state.lastCapturedLocation = pt;
+            this.dispatchLocation(pt);
+          },
+          () => {
+            this.state.gpsEnabled = false;
+            this.state.statusMessage = 'GPS unavailable';
+            this.emit();
+          },
+          {
+            enableHighAccuracy: true,
+            distanceFilter: 10,
+            interval: 5000,
+            fastestInterval: 4000,
+            showsBackgroundLocationIndicator: true,
+            forceRequestLocation: false,
+          }
+        );
+      } catch {
+        this.state.statusMessage = 'GPS watch unavailable on this device';
+        this.emit();
+      }
     };
 
     const bgTask = async () => {
@@ -234,18 +239,33 @@ class GpsService {
     };
 
     if (!BackgroundService.isRunning()) {
-      try {
-        await BackgroundService.start(bgTask, {
-          taskName: 'CabLiveTracking',
-          taskTitle: 'Active Ride GPS Tracking',
-          taskDesc: 'Sharing live cab location with company administrator',
-          taskIcon: { name: 'ic_launcher', type: 'mipmap' },
-          color: '#1D4ED8',
-          foregroundServiceType: ['location'],
-          parameters: {},
-        });
-      } catch {
-        // Fallback to foreground watch if OS denies background foreground service
+      let hasOsLocationPerm = true;
+      if (Platform.OS === 'android') {
+        const fineGranted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        const coarseGranted = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION
+        );
+        hasOsLocationPerm = fineGranted || coarseGranted;
+      }
+
+      if (hasOsLocationPerm) {
+        try {
+          await BackgroundService.start(bgTask, {
+            taskName: 'CabLiveTracking',
+            taskTitle: 'Active Ride GPS Tracking',
+            taskDesc: 'Sharing live cab location with company administrator',
+            taskIcon: { name: 'ic_launcher', type: 'mipmap' },
+            color: '#1D4ED8',
+            foregroundServiceType: ['location'],
+            parameters: {},
+          });
+        } catch {
+          // Fallback to foreground watch if OS denies background foreground service
+          startWatch();
+        }
+      } else {
         startWatch();
       }
     }
