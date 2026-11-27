@@ -257,6 +257,8 @@ describe('Legal Compliance Audit Tests (DPDP, GDPR Fonts, CIPA, CAN-SPAM)', () =
     expect(termsRes.headers['permissions-policy']).toContain('geolocation=(self)');
     expect(termsRes.headers['content-security-policy']).toBeTruthy();
     expect(MONITOR_HTML).toContain('function esc(');
+    expect(DRIVER_HTML).not.toMatch(/\son(click|input)=/i);
+    expect(MONITOR_HTML).not.toMatch(/\son(click|input)=/i);
 
     const drvToken = signToken({
       sub: 'drv-1',

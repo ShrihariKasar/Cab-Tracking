@@ -31,7 +31,7 @@ export const DRIVER_HTML = `<!doctype html>
       <h2 style="margin:0">Driver Sign In</h2>
       <input id="mobile" value="+15550000002" placeholder="Mobile Number" />
       <input id="pass" type="password" value="Driver@1234" placeholder="Password" />
-      <button class="btn" onclick="login()">Sign In</button>
+      <button id="loginBtn" class="btn" type="button">Sign In</button>
       <div id="loginErr" class="muted" style="color:#dc2626"></div>
     </div>
 
@@ -42,13 +42,13 @@ export const DRIVER_HTML = `<!doctype html>
       <div class="row"><span>Coordinates</span><strong id="coords">-</strong></div>
       <div class="row"><span>Last Synced</span><strong id="syncTime">-</strong></div>
       <div id="routeInputs" style="display:flex;flex-direction:column;gap:8px;margin-top:4px;position:relative">
-        <input id="pickupInput" placeholder="From (type to search or leave blank for GPS)" oninput="searchPlaces('pickup', this.value)" autocomplete="off" />
-        <input id="destInput" placeholder="To (type destination e.g. Pune Airport)" oninput="searchPlaces('dest', this.value)" autocomplete="off" />
+        <input id="pickupInput" placeholder="From (type to search or leave blank for GPS)" autocomplete="off" />
+        <input id="destInput" placeholder="To (type destination e.g. Pune Airport)" autocomplete="off" />
         <div id="suggestions" style="display:none;flex-direction:column;border:1px solid #e5e5e5;border-radius:10px;overflow:hidden;background:#fff"></div>
       </div>
       <div id="routeSummary" class="muted" style="display:none;font-weight:700;color:#111"></div>
-      <button id="startBtn" class="btn" onclick="startRide()">START RIDE</button>
-      <button id="endBtn" class="btn end" style="display:none" onclick="endRide()">END RIDE</button>
+      <button id="startBtn" class="btn" type="button">START RIDE</button>
+      <button id="endBtn" class="btn end" type="button" style="display:none">END RIDE</button>
       <div id="msg" class="muted" style="color:#dc2626"></div>
     </div>
   </main>
@@ -57,7 +57,7 @@ export const DRIVER_HTML = `<!doctype html>
     Analytics &amp; Session Replay: <strong id="privState">Disabled (Default)</strong> •
     <a href="/privacy-policy" style="color:#111;font-weight:600">Privacy Policy</a> •
     <a href="/terms-and-conditions" style="color:#111;font-weight:600">Terms</a> •
-    <button type="button" onclick="togglePrivacyConsent()" style="background:none;border:none;color:#111;font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Privacy Preferences</button>
+    <button id="privToggleBtn" type="button" style="background:none;border:none;color:#111;font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Privacy Preferences</button>
   </footer>
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -258,6 +258,13 @@ export const DRIVER_HTML = `<!doctype html>
       badge.textContent = 'Idle';
       badge.className = 'pill';
     }
+
+    document.getElementById('loginBtn').addEventListener('click', login);
+    document.getElementById('startBtn').addEventListener('click', startRide);
+    document.getElementById('endBtn').addEventListener('click', endRide);
+    document.getElementById('privToggleBtn').addEventListener('click', togglePrivacyConsent);
+    document.getElementById('pickupInput').addEventListener('input', (e) => searchPlaces('pickup', e.target.value));
+    document.getElementById('destInput').addEventListener('input', (e) => searchPlaces('dest', e.target.value));
   </script>
 </body>
 </html>`;

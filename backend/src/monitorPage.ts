@@ -37,7 +37,7 @@ export const MONITOR_HTML = `<!doctype html>
         <h3 style="margin:0 0 10px">Admin Sign In</h3>
         <input id="mobile" value="+15550000001" placeholder="Admin Mobile" />
         <input id="pass" type="password" value="Admin@1234" placeholder="Password" />
-        <button class="btn" onclick="login()">Sign In &amp; Watch Live</button>
+        <button id="monLoginBtn" type="button" class="btn">Sign In &amp; Watch Live</button>
         <div id="loginErr" class="muted" style="color:#dc2626;margin-top:6px"></div>
       </div>
       <div id="driversList" style="display:none;flex-direction:column;gap:10px"></div>
@@ -46,7 +46,7 @@ export const MONITOR_HTML = `<!doctype html>
   </main>
   <footer style="padding:6px 16px;font-size:11px;color:#525252;display:flex;justify-content:space-between;background:#fff;border-top:1px solid #e5e5e5">
     <span>Analytics &amp; Session Replay: <strong id="monPrivState">Disabled (Default)</strong></span>
-    <span><a href="/privacy-policy" style="color:#111;font-weight:600">Privacy Policy</a> • <a href="/terms-and-conditions" style="color:#111;font-weight:600">Terms</a> • <button type="button" onclick="toggleMonitorPrivacy()" style="background:none;border:none;color:#111;font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Privacy Preferences</button></span>
+    <span><a href="/privacy-policy" style="color:#111;font-weight:600">Privacy Policy</a> • <a href="/terms-and-conditions" style="color:#111;font-weight:600">Terms</a> • <button id="monPrivBtn" type="button" style="background:none;border:none;color:#111;font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Privacy Preferences</button></span>
   </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -182,7 +182,7 @@ export const MONITOR_HTML = `<!doctype html>
       const el = document.getElementById('driversList');
       el.innerHTML = drivers.map((d) => {
         const isLive = d.rideStatus === 'RIDE_STARTED';
-        return '<div class="card ' + (isLive ? 'active' : '') + '" onclick="focusDriver(\\'' + esc(d.id) + '\\')">' +
+        return '<div class="card ' + (isLive ? 'active' : '') + '" data-driver-id="' + esc(d.id) + '">' +
           '<div style="display:flex;justify-content:space-between;align-items:center">' +
             '<strong>' + esc(d.fullName) + '</strong>' +
             '<span class="pill ' + (isLive ? 'live' : '') + '">' + (isLive ? 'ACTIVE RIDE' : esc(d.availabilityStatus)) + '</span>' +
@@ -241,6 +241,13 @@ export const MONITOR_HTML = `<!doctype html>
       });
       document.getElementById('monPrivState').textContent = monAnalyticsConsent ? 'Enabled (Opted In)' : 'Disabled (Default)';
     }
+
+    document.getElementById('monLoginBtn').addEventListener('click', login);
+    document.getElementById('monPrivBtn').addEventListener('click', toggleMonitorPrivacy);
+    document.getElementById('driversList').addEventListener('click', (e) => {
+      const card = e.target.closest('[data-driver-id]');
+      if (card) focusDriver(card.getAttribute('data-driver-id'));
+    });
   </script>
 </body>
 </html>`;
