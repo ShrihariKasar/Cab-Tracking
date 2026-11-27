@@ -14,7 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/AppIcon';
 import { CustomVehicleMarker } from '../../components/CustomVehicleMarker';
@@ -42,6 +42,7 @@ export const DriverDashboardScreen: React.FC = () => {
   const [activeField, setActiveField] = useState<'pickup' | 'dest' | null>(null);
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mapRef = useRef<MapView | null>(null);
   const [busy, setBusy] = useState(false);
 
   const handlePlaceType = (field: 'pickup' | 'dest', text: string) => {
@@ -212,6 +213,26 @@ export const DriverDashboardScreen: React.FC = () => {
   const accuracyText = gps.lastCapturedLocation ? `±${Math.round(gps.lastCapturedLocation.accuracy)}m` : 'Locating';
 
   useEffect(() => {
+    if (routeCoords.length > 1) {
+      mapRef.current?.fitToCoordinates(routeCoords, {
+        edgePadding: { top: 60, right: 40, bottom: 60, left: 40 },
+        animated: true,
+      });
+    }
+  }, [routeCoords]);
+
+  useEffect(() => {
+    if (gps.lastCapturedLocation && routeCoords.length <= 1) {
+      mapRef.current?.animateToRegion({
+        latitude: gps.lastCapturedLocation.latitude,
+        longitude: gps.lastCapturedLocation.longitude,
+        latitudeDelta: 0.012,
+        longitudeDelta: 0.012,
+      });
+    }
+  }, [gps.lastCapturedLocation?.latitude, gps.lastCapturedLocation?.longitude, routeCoords.length]);
+
+  useEffect(() => {
     if (destCoords) {
       let active = true;
       fetchRoadRoute({ latitude: lat, longitude: lng }, destCoords).then((pts) => {
@@ -262,11 +283,17 @@ export const DriverDashboardScreen: React.FC = () => {
       {/* Main Map Area */}
       <View style={[styles.mapContainer, activeField ? styles.mapContainerCompact : null]}>
         <MapView
+          ref={mapRef}
           provider={PROVIDER_GOOGLE}
           style={styles.map}
           customMapStyle={CLEAN_MAP_STYLE}
-          region={{ latitude: lat, longitude: lng, latitudeDelta: 0.012, longitudeDelta: 0.012 }}
+          initialRegion={{ latitude: lat, longitude: lng, latitudeDelta: 0.012, longitudeDelta: 0.012 }}
         >
+          <UrlTile
+            urlTemplate="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+            maximumZ={19}
+            zIndex={-1}
+          />
           {routeCoords.length > 1 ? (
             <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
           ) : null}

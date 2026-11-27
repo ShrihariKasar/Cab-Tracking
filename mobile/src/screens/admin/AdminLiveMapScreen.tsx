@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/AppIcon';
 import { CustomVehicleMarker } from '../../components/CustomVehicleMarker';
@@ -174,6 +174,11 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
           longitudeDelta: 0.02,
         }}
       >
+        <UrlTile
+          urlTemplate="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
+          maximumZ={19}
+          zIndex={-1}
+        />
         {info?.latitude && info?.longitude ? (
           <Marker.Animated coordinate={animatedCoord as any} anchor={{ x: 0.5, y: 0.5 }}>
             <CustomVehicleMarker active={!isOfflineOrStale} offline={isOfflineOrStale} />

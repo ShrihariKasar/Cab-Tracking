@@ -80,11 +80,15 @@ jest.mock('react-native-maps', () => {
   const React = require('react');
   const MapView: any = ({ children, ...p }: any) => React.createElement('MapView', p, children);
   const Marker: any = ({ children, ...p }: any) => React.createElement('Marker', p, children);
+  const Polyline: any = (p: any) => React.createElement('Polyline', p);
+  const UrlTile: any = (p: any) => React.createElement('UrlTile', p);
   Marker.Animated = Marker;
   return {
     __esModule: true,
     default: MapView,
     Marker,
+    Polyline,
+    UrlTile,
     AnimatedRegion: class {
       constructor(_cfg: any) {}
       timing() {
