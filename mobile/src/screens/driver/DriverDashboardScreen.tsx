@@ -14,17 +14,17 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/AppIcon';
-import { CustomVehicleMarker } from '../../components/CustomVehicleMarker';
 import { FloatingBottomSheet } from '../../components/FloatingBottomSheet';
+import { LeafletMap } from '../../components/LeafletMap';
 import { StatusPill } from '../../components/StatusPill';
-import { CLEAN_MAP_STYLE, getTimeGreeting, Theme } from '../../config/theme';
+import { getTimeGreeting, Theme } from '../../config/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { api } from '../../services/api';
 import { gpsService, type GpsStatusSnapshot } from '../../services/gpsService';
 import { reverseGeocode, searchPlaces, type PlaceSuggestion } from '../../services/locationSearch';
+import { recordLocalRide } from '../../services/secureStorage';
 import { useResponsive } from '../../utils/responsive';
 import { fetchRoadRoute, type LatLngPoint } from '../../utils/routing';
 
@@ -42,7 +42,6 @@ export const DriverDashboardScreen: React.FC = () => {
   const [activeField, setActiveField] = useState<'pickup' | 'dest' | null>(null);
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const mapRef = useRef<MapView | null>(null);
   const [busy, setBusy] = useState(false);
 
   const handlePlaceType = (field: 'pickup' | 'dest', text: string) => {
@@ -158,12 +157,20 @@ export const DriverDashboardScreen: React.FC = () => {
         return;
       }
 
-      await api.post('/rides/start', {
+      const startRes = await api.post('/rides/start', {
         ...currentCoords,
         pickupAddress: pickupAddress.trim() || 'Current GPS Location',
         destinationAddress: destinationAddress.trim() || undefined,
         destinationLatitude: destCoords?.latitude,
         destinationLongitude: destCoords?.longitude,
+      });
+      const startedRideId = startRes.data?.data?.rideId || `local-${Date.now()}`;
+      recordLocalRide({
+        id: startedRideId,
+        status: 'RIDE_STARTED',
+        startTime: startRes.data?.data?.startTime || new Date().toISOString(),
+        pickupAddress: pickupAddress.trim() || 'Current GPS Location',
+        destinationAddress: destinationAddress.trim() || null,
       });
       setStartCoords({ latitude: currentCoords.latitude, longitude: currentCoords.longitude });
       await gpsService.startRideTracking(user.id);
@@ -195,7 +202,17 @@ export const DriverDashboardScreen: React.FC = () => {
           try {
             const last = gpsService.getSnapshot().lastCapturedLocation;
             await gpsService.stopRideTracking();
-            await api.post('/rides/end', last || {});
+            const endRes = await api.post('/rides/end', last || {});
+            if (endRes.data?.data?.rideId) {
+              recordLocalRide({
+                id: endRes.data.data.rideId,
+                status: 'RIDE_ENDED',
+                startTime: new Date().toISOString(),
+                endTime: endRes.data.data.endTime || new Date().toISOString(),
+                pickupAddress: pickupAddress.trim() || 'Current GPS Location',
+                destinationAddress: destinationAddress.trim() || null,
+              });
+            }
             setRideStarted(false);
             pulseStatus();
           } catch (err: any) {
@@ -211,26 +228,6 @@ export const DriverDashboardScreen: React.FC = () => {
   const lat = gps.lastCapturedLocation?.latitude ?? 12.9716;
   const lng = gps.lastCapturedLocation?.longitude ?? 77.5946;
   const accuracyText = gps.lastCapturedLocation ? `±${Math.round(gps.lastCapturedLocation.accuracy)}m` : 'Locating';
-
-  useEffect(() => {
-    if (routeCoords.length > 1) {
-      mapRef.current?.fitToCoordinates(routeCoords, {
-        edgePadding: { top: 60, right: 40, bottom: 60, left: 40 },
-        animated: true,
-      });
-    }
-  }, [routeCoords]);
-
-  useEffect(() => {
-    if (gps.lastCapturedLocation && routeCoords.length <= 1) {
-      mapRef.current?.animateToRegion({
-        latitude: gps.lastCapturedLocation.latitude,
-        longitude: gps.lastCapturedLocation.longitude,
-        latitudeDelta: 0.012,
-        longitudeDelta: 0.012,
-      });
-    }
-  }, [gps.lastCapturedLocation?.latitude, gps.lastCapturedLocation?.longitude, routeCoords.length]);
 
   useEffect(() => {
     if (destCoords) {
@@ -282,31 +279,14 @@ export const DriverDashboardScreen: React.FC = () => {
 
       {/* Main Map Area */}
       <View style={[styles.mapContainer, activeField ? styles.mapContainerCompact : null]}>
-        <MapView
-          ref={mapRef}
-          provider={PROVIDER_GOOGLE}
-          mapType="none"
-          style={styles.map}
-          initialRegion={{ latitude: lat, longitude: lng, latitudeDelta: 0.012, longitudeDelta: 0.012 }}
-        >
-          <UrlTile
-            urlTemplate="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
-            maximumZ={19}
-            zIndex={-1}
-          />
-          {routeCoords.length > 1 ? (
-            <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={5} zIndex={1} />
-          ) : null}
-          {rideStarted && startCoords ? (
-            <Marker coordinate={startCoords} title="Start" description={pickupAddress || 'Start'} pinColor="green" />
-          ) : null}
-          {destCoords ? (
-            <Marker coordinate={destCoords} title="Destination" description={destinationAddress} pinColor="red" />
-          ) : null}
-          <Marker coordinate={{ latitude: lat, longitude: lng }} anchor={{ x: 0.5, y: 0.5 }}>
-            <CustomVehicleMarker active={rideStarted} offline={!gps.internetConnected} />
-          </Marker>
-        </MapView>
+        <LeafletMap
+          vehicleCoord={{ latitude: lat, longitude: lng }}
+          startCoord={rideStarted ? startCoords : null}
+          destCoord={destCoords}
+          routeCoords={routeCoords}
+          active={rideStarted}
+          offline={!gps.internetConnected}
+        />
 
         {/* Floating GPS & Connectivity Pills */}
         <View style={[styles.mapOverlayPills, { left: horizontalPadding, right: horizontalPadding }]}>

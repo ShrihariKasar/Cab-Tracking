@@ -1,12 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { AnimatedRegion, Marker, Polyline, PROVIDER_GOOGLE, UrlTile } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/AppIcon';
-import { CustomVehicleMarker } from '../../components/CustomVehicleMarker';
 import { FloatingBottomSheet } from '../../components/FloatingBottomSheet';
+import { LeafletMap } from '../../components/LeafletMap';
 import { StatusPill } from '../../components/StatusPill';
-import { CLEAN_MAP_STYLE, Theme } from '../../config/theme';
+import { Theme } from '../../config/theme';
 import { api } from '../../services/api';
 import { socketManager } from '../../services/socket';
 import { useResponsive } from '../../utils/responsive';
@@ -43,32 +42,7 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
   const [routeCoords, setRouteCoords] = useState<LatLngPoint[]>([]);
   const [stale, setStale] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const mapRef = useRef<MapView | null>(null);
-
-  const animatedCoord = useRef(
-    new AnimatedRegion({
-      latitude: 12.9716,
-      longitude: 77.5946,
-      latitudeDelta: 0.012,
-      longitudeDelta: 0.012,
-    })
-  ).current;
-
-  const moveMarker = useCallback(
-    (lat: number, lng: number) => {
-      animatedCoord
-        .timing({
-          latitude: lat,
-          longitude: lng,
-          latitudeDelta: 0.012,
-          longitudeDelta: 0.012,
-          duration: 1000,
-          useNativeDriver: false,
-        } as any)
-        .start();
-    },
-    [animatedCoord]
-  );
+  const [recenterSignal, setRecenterSignal] = useState(0);
 
   useEffect(() => {
     api
@@ -77,15 +51,6 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
         setLoadError(null);
         const d: DriverLocationPayload = res.data.data;
         setInfo(d);
-        if (d.latitude && d.longitude) {
-          moveMarker(d.latitude, d.longitude);
-          mapRef.current?.animateToRegion({
-            latitude: d.latitude,
-            longitude: d.longitude,
-            latitudeDelta: 0.012,
-            longitudeDelta: 0.012,
-          });
-        }
       })
       .catch((err) => {
         setLoadError(err?.response?.data?.message || 'Unable to load driver location.');
@@ -109,7 +74,6 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
               }
             : prev
         );
-        moveMarker(ping.latitude, ping.longitude);
       };
       socket.on('admin:location:updated', onLoc);
       return () => socket.off('admin:location:updated', onLoc);
@@ -129,7 +93,7 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
       mounted = false;
       clearInterval(staleTimer);
     };
-  }, [driverId, moveMarker]);
+  }, [driverId]);
 
   useEffect(() => {
     if (info?.latitude && info?.longitude && info?.destinationLatitude && info?.destinationLongitude) {
@@ -148,62 +112,33 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
   }, [info?.destinationLatitude, info?.destinationLongitude, Boolean(info?.latitude && info?.longitude)]);
 
   const recenter = () => {
-    if (info?.latitude && info?.longitude) {
-      mapRef.current?.animateToRegion({
-        latitude: info.latitude,
-        longitude: info.longitude,
-        latitudeDelta: 0.012,
-        longitudeDelta: 0.012,
-      });
-    }
+    setRecenterSignal((s) => s + 1);
   };
 
   const isOfflineOrStale = stale || info?.internetConnected === false;
 
   return (
     <View style={styles.container}>
-      <MapView
-        ref={mapRef}
-        provider={PROVIDER_GOOGLE}
-        mapType="none"
-        style={styles.map}
-        initialRegion={{
+      <LeafletMap
+        vehicleCoord={{
           latitude: info?.latitude || 12.9716,
           longitude: info?.longitude || 77.5946,
-          latitudeDelta: 0.02,
-          longitudeDelta: 0.02,
         }}
-      >
-        <UrlTile
-          urlTemplate="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"
-          maximumZ={19}
-          zIndex={-1}
-        />
-        {info?.latitude && info?.longitude ? (
-          <Marker.Animated coordinate={animatedCoord as any} anchor={{ x: 0.5, y: 0.5 }}>
-            <CustomVehicleMarker active={!isOfflineOrStale} offline={isOfflineOrStale} />
-          </Marker.Animated>
-        ) : null}
-        {routeCoords.length > 1 ? (
-          <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={5} zIndex={1} />
-        ) : null}
-        {info?.startLatitude && info?.startLongitude ? (
-          <Marker
-            coordinate={{ latitude: info.startLatitude, longitude: info.startLongitude }}
-            title="Start"
-            description={info.pickupAddress || 'Start'}
-            pinColor="green"
-          />
-        ) : null}
-        {info?.destinationLatitude && info?.destinationLongitude ? (
-          <Marker
-            coordinate={{ latitude: info.destinationLatitude, longitude: info.destinationLongitude }}
-            title="Destination"
-            description={info.destinationAddress || ''}
-            pinColor="red"
-          />
-        ) : null}
-      </MapView>
+        startCoord={
+          info?.startLatitude && info?.startLongitude
+            ? { latitude: info.startLatitude, longitude: info.startLongitude }
+            : null
+        }
+        destCoord={
+          info?.destinationLatitude && info?.destinationLongitude
+            ? { latitude: info.destinationLatitude, longitude: info.destinationLongitude }
+            : null
+        }
+        routeCoords={routeCoords}
+        active={!isOfflineOrStale}
+        offline={isOfflineOrStale}
+        recenterSignal={recenterSignal}
+      />
 
       {/* Top Floating Panel */}
       <View

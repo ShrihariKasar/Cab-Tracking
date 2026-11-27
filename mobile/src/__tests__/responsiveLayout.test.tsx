@@ -76,6 +76,13 @@ jest.mock('lucide-react-native', () => {
   return new Proxy({}, { get: () => stub });
 });
 
+jest.mock('react-native-webview', () => {
+  const React = require('react');
+  return {
+    WebView: (p: any) => React.createElement('WebView', p),
+  };
+});
+
 jest.mock('react-native-maps', () => {
   const React = require('react');
   const MapView: any = ({ children, ...p }: any) => React.createElement('MapView', p, children);

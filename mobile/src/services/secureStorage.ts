@@ -46,3 +46,39 @@ export async function clearSession(): Promise<void> {
   await Keychain.resetGenericPassword({ service: TOKEN_SERVICE });
   await Keychain.resetGenericPassword({ service: USER_SERVICE });
 }
+
+const HISTORY_SERVICE = 'com.cabtracking.mvp.rideHistory';
+
+export interface LocalRideRecord {
+  id: string;
+  status: string;
+  startTime: string;
+  endTime?: string | null;
+  pickupAddress?: string | null;
+  destinationAddress?: string | null;
+}
+
+export async function getLocalRideHistory(): Promise<LocalRideRecord[]> {
+  try {
+    const res = await Keychain.getGenericPassword({ service: HISTORY_SERVICE });
+    if (!res) return [];
+    const parsed = JSON.parse(res.password);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function recordLocalRide(entry: LocalRideRecord): Promise<void> {
+  try {
+    const existing = await getLocalRideHistory();
+    const filtered = existing.filter((r) => r.id !== entry.id);
+    const next = [entry, ...filtered].slice(0, 30);
+    await Keychain.setGenericPassword('history', JSON.stringify(next), {
+      service: HISTORY_SERVICE,
+      accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+    });
+  } catch {
+    // Ignore storage errors
+  }
+}

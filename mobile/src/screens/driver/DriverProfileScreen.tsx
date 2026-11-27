@@ -12,6 +12,7 @@ import {
   type PrivacyPreferences,
 } from '../../services/analyticsGuard';
 import { api } from '../../services/api';
+import { getLocalRideHistory } from '../../services/secureStorage';
 import { useResponsive } from '../../utils/responsive';
 
 export const DriverProfileScreen: React.FC = () => {
@@ -35,13 +36,21 @@ export const DriverProfileScreen: React.FC = () => {
   >([]);
   const [privacyPrefs, setPrivacyPrefs] = useState<PrivacyPreferences>(getPrivacyPreferences());
 
+  const loadHistory = async () => {
+    const local = await getLocalRideHistory();
+    try {
+      const res = await api.get('/rides/history');
+      const serverRows = res.data?.data || [];
+      setRideHistory(serverRows.length > 0 ? serverRows : local);
+    } catch {
+      setRideHistory(local);
+    }
+  };
+
   useEffect(() => {
     if (user?.id) {
       loadPrivacyPreferences(user.id).then(setPrivacyPrefs);
-      api
-        .get('/rides/history')
-        .then((res) => setRideHistory(res.data?.data || []))
-        .catch(() => {});
+      loadHistory();
     }
   }, [user?.id]);
 
@@ -224,9 +233,14 @@ export const DriverProfileScreen: React.FC = () => {
       </View>
 
       <View style={[styles.card, Theme.shadow.card]}>
-        <View style={styles.cardHeader}>
-          <AppIcon name="clock" size={18} color={Theme.colors.text} />
-          <Text style={styles.sectionTitle}>Ride History</Text>
+        <View style={[styles.cardHeader, { justifyContent: 'space-between' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <AppIcon name="clock" size={18} color={Theme.colors.text} />
+            <Text style={styles.sectionTitle}>Ride History</Text>
+          </View>
+          <TouchableOpacity onPress={loadHistory}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: Theme.colors.primary }}>Refresh</Text>
+          </TouchableOpacity>
         </View>
         {rideHistory.length === 0 ? (
           <Text style={styles.infoLabel}>No rides recorded yet.</Text>
