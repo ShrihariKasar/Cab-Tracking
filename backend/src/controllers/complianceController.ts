@@ -265,3 +265,73 @@ export async function checkSuppressionStatus(req: Request, res: Response, next: 
     next(err);
   }
 }
+
+export async function exportMyData(req: Request, res: Response, next: NextFunction) {
+  try {
+    const user = req.user!;
+    if (user.role === 'ADMIN') {
+      const adminRes = await pool.query(
+        `SELECT id, mobile_number AS "mobileNumber", full_name AS "fullName", is_active AS "isActive", created_at AS "createdAt"
+         FROM admins WHERE id = $1`,
+        [user.sub]
+      );
+      return res.json({ success: true, data: { role: 'ADMIN', profile: adminRes.rows[0] || null } });
+    }
+
+    const [profileRes, consentRes, ridesRes] = await Promise.all([
+      pool.query(
+        `SELECT id, mobile_number AS "mobileNumber", full_name AS "fullName", date_of_birth AS "dateOfBirth",
+                account_status AS "accountStatus", consent_status AS "consentStatus", created_at AS "createdAt"
+         FROM drivers WHERE id = $1`,
+        [user.sub]
+      ),
+      pool.query(
+        `SELECT id, user_age_years AS "userAgeYears", is_minor AS "isMinor", parent_name AS "parentName",
+                verification_method AS "verificationMethod", verification_reference AS "verificationReference",
+                consent_status AS "consentStatus", granted_at AS "grantedAt", withdrawn_at AS "withdrawnAt"
+         FROM consent_records WHERE user_id = $1 ORDER BY created_at DESC`,
+        [user.sub]
+      ),
+      pool.query(
+        `SELECT id, status, start_time AS "startTime", end_time AS "endTime",
+                pickup_address AS "pickupAddress", destination_address AS "destinationAddress"
+         FROM rides WHERE driver_id = $1 ORDER BY start_time DESC LIMIT 100`,
+        [user.sub]
+      ),
+    ]);
+
+    return res.json({
+      success: true,
+      data: {
+        exportedAt: new Date().toISOString(),
+        profile: profileRes.rows[0] || null,
+        consentRecords: consentRes.rows,
+        recentRides: ridesRes.rows,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteMyAccount(req: Request, res: Response, next: NextFunction) {
+  try {
+    const user = req.user!;
+    if (user.role !== 'DRIVER') {
+      return res.status(403).json({
+        success: false,
+        message: 'Administrator accounts must be deprovisioned by an organization owner.',
+      });
+    }
+
+    await pool.query(`DELETE FROM drivers WHERE id = $1`, [user.sub]);
+    await pool.query(`DELETE FROM privacy_preferences WHERE subject_key = $1`, [user.sub]);
+
+    return res.json({
+      success: true,
+      data: { deleted: true, deletedAt: new Date().toISOString() },
+    });
+  } catch (err) {
+    next(err);
+  }
+}

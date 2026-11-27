@@ -56,6 +56,7 @@ export const DRIVER_HTML = `<!doctype html>
   <footer style="padding:10px 16px;font-size:12px;color:#525252;text-align:center;border-top:1px solid #e5e5e5;background:#fff">
     Analytics &amp; Session Replay: <strong id="privState">Disabled (Default)</strong> •
     <a href="/privacy-policy" style="color:#111;font-weight:600">Privacy Policy</a> •
+    <a href="/terms-and-conditions" style="color:#111;font-weight:600">Terms</a> •
     <button type="button" onclick="togglePrivacyConsent()" style="background:none;border:none;color:#111;font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Privacy Preferences</button>
   </footer>
   <script src="/socket.io/socket.io.js"></script>

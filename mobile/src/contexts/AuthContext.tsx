@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../services/api';
+import { gpsService } from '../services/gpsService';
 import { clearSession, getSavedUser, getToken, saveSession } from '../services/secureStorage';
 import { socketManager } from '../services/socket';
 import { AuthUser, UserRole } from '../types';
@@ -43,6 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    await gpsService.resetSessionState();
     socketManager.disconnect();
     await clearSession();
     setUser(null);

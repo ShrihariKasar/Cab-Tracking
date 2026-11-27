@@ -46,7 +46,7 @@ export const MONITOR_HTML = `<!doctype html>
   </main>
   <footer style="padding:6px 16px;font-size:11px;color:#525252;display:flex;justify-content:space-between;background:#fff;border-top:1px solid #e5e5e5">
     <span>Analytics &amp; Session Replay: <strong id="monPrivState">Disabled (Default)</strong></span>
-    <span><a href="/privacy-policy" style="color:#111;font-weight:600">Privacy Policy</a> • <button type="button" onclick="toggleMonitorPrivacy()" style="background:none;border:none;color:#111;font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Privacy Preferences</button></span>
+    <span><a href="/privacy-policy" style="color:#111;font-weight:600">Privacy Policy</a> • <a href="/terms-and-conditions" style="color:#111;font-weight:600">Terms</a> • <button type="button" onclick="toggleMonitorPrivacy()" style="background:none;border:none;color:#111;font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Privacy Preferences</button></span>
   </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -156,8 +156,17 @@ export const MONITOR_HTML = `<!doctype html>
       }
     }
 
+    function esc(v) {
+      return String(v == null ? '' : v)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function updateMarker(id, name, reg, lat, lng, ts) {
-      const label = '<b>' + name + '</b><br/>' + (reg || '') + '<br/>Updated: ' + new Date(ts).toLocaleTimeString();
+      const label = '<b>' + esc(name) + '</b><br/>' + esc(reg || '') + '<br/>Updated: ' + esc(new Date(ts).toLocaleTimeString());
       if (markers[id]) {
         markers[id].setLatLng([lat, lng]).setPopupContent(label);
       } else {
@@ -173,16 +182,16 @@ export const MONITOR_HTML = `<!doctype html>
       const el = document.getElementById('driversList');
       el.innerHTML = drivers.map((d) => {
         const isLive = d.rideStatus === 'RIDE_STARTED';
-        return '<div class="card ' + (isLive ? 'active' : '') + '" onclick="focusDriver(\\'' + d.id + '\\')">' +
+        return '<div class="card ' + (isLive ? 'active' : '') + '" onclick="focusDriver(\\'' + esc(d.id) + '\\')">' +
           '<div style="display:flex;justify-content:space-between;align-items:center">' +
-            '<strong>' + d.fullName + '</strong>' +
-            '<span class="pill ' + (isLive ? 'live' : '') + '">' + (isLive ? 'ACTIVE RIDE' : d.availabilityStatus) + '</span>' +
+            '<strong>' + esc(d.fullName) + '</strong>' +
+            '<span class="pill ' + (isLive ? 'live' : '') + '">' + (isLive ? 'ACTIVE RIDE' : esc(d.availabilityStatus)) + '</span>' +
           '</div>' +
-          '<div class="muted">' + (d.vehicleRegistration || 'No Vehicle') + ' • ' + (d.vehicleModel || '') + '</div>' +
+          '<div class="muted">' + esc(d.vehicleRegistration || 'No Vehicle') + ' • ' + esc(d.vehicleModel || '') + '</div>' +
           (isLive && (d.pickupAddress || d.destinationAddress)
-            ? '<div class="muted" style="color:#111;font-weight:600;margin-top:2px">' + (d.pickupAddress || 'GPS') + (d.destinationAddress ? ' → ' + d.destinationAddress : '') + '</div>'
+            ? '<div class="muted" style="color:#111;font-weight:600;margin-top:2px">' + esc(d.pickupAddress || 'GPS') + (d.destinationAddress ? ' → ' + esc(d.destinationAddress) : '') + '</div>'
             : '') +
-          '<div class="muted">Last GPS: ' + (d.capturedAt ? new Date(d.capturedAt).toLocaleTimeString() : 'Waiting...') + '</div>' +
+          '<div class="muted">Last GPS: ' + esc(d.capturedAt ? new Date(d.capturedAt).toLocaleTimeString() : 'Waiting...') + '</div>' +
         '</div>';
       }).join('');
     }

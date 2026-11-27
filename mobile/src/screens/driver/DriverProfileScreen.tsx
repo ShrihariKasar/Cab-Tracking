@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AppIcon } from '../../components/AppIcon';
 import { StatusPill } from '../../components/StatusPill';
+import { ENV } from '../../config/env';
 import { Theme } from '../../config/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -33,6 +34,46 @@ export const DriverProfileScreen: React.FC = () => {
     if (user?.id) {
       await updatePrivacyPreferences(user.id, next);
     }
+  };
+
+  const handleExportData = async () => {
+    try {
+      const res = await api.get('/compliance/my-data');
+      const ridesCount = res.data?.data?.recentRides?.length ?? 0;
+      Alert.alert(
+        'Personal Data Exported',
+        `Profile, consent records, and ${ridesCount} recent ride(s) retrieved from server.`
+      );
+    } catch (err: any) {
+      Alert.alert('Export Failed', err?.response?.data?.message || 'Unable to export data.');
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This permanently deletes your driver profile, ride history, and location records. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Forever',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete('/compliance/account');
+              await logout();
+            } catch (err: any) {
+              Alert.alert('Delete Failed', err?.response?.data?.message || 'Unable to delete account.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const openLegalDoc = (path: '/privacy-policy' | '/terms-and-conditions') => {
+    const base = ENV.API_URL.replace(/\/api\/?$/, '');
+    Linking.openURL(`${base}${path}`).catch(() => {});
   };
 
   const handleWithdrawConsent = () => {
@@ -162,9 +203,23 @@ export const DriverProfileScreen: React.FC = () => {
             </Text>
           </TouchableOpacity>
         </View>
+        <TouchableOpacity onPress={handleExportData} style={styles.secondaryBtn}>
+          <Text style={styles.secondaryBtnText}>Export My Personal Data</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleWithdrawConsent} style={styles.secondaryBtn}>
           <Text style={styles.secondaryBtnText}>Withdraw DPDP Consent</Text>
         </TouchableOpacity>
+        <TouchableOpacity onPress={handleDeleteAccount} style={styles.secondaryBtn}>
+          <Text style={[styles.secondaryBtnText, { color: Theme.colors.error }]}>Delete My Account</Text>
+        </TouchableOpacity>
+        <View style={styles.actionRow}>
+          <TouchableOpacity onPress={() => openLegalDoc('/privacy-policy')} style={[styles.secondaryBtn, styles.actionBtn]}>
+            <Text style={styles.secondaryBtnText}>Privacy Policy</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => openLegalDoc('/terms-and-conditions')} style={[styles.secondaryBtn, styles.actionBtn]}>
+            <Text style={styles.secondaryBtnText}>Terms</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <TouchableOpacity onPress={logout} style={styles.logoutBtn}>

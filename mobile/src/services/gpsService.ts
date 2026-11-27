@@ -321,6 +321,40 @@ class GpsService {
     await this.flushQueue();
     this.emit();
   }
+
+  async resetSessionState(): Promise<void> {
+    this.driverId = null;
+    this.queue = [];
+    this.lastEmitMs = 0;
+    this.permissionCheckedOnce = false;
+    this.state = {
+      permissionGranted: false,
+      permissionDeniedPermanent: false,
+      gpsEnabled: true,
+      internetConnected: true,
+      trackingActive: false,
+      lastCapturedLocation: null,
+      lastSyncedAt: null,
+      queuedCount: 0,
+      statusMessage: null,
+    };
+    if (this.watchId !== null) {
+      Geolocation.clearWatch(this.watchId);
+      this.watchId = null;
+    }
+    if (BackgroundService.isRunning()) {
+      try {
+        await BackgroundService.stop();
+      } catch {
+        // Ignore if already stopped
+      }
+    }
+    if (this.netUnsub) {
+      this.netUnsub();
+      this.netUnsub = null;
+    }
+    this.emit();
+  }
 }
 
 export const gpsService = new GpsService();

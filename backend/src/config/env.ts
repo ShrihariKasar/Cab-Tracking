@@ -1,11 +1,18 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+const nodeEnv = process.env.NODE_ENV || 'development';
+const jwtSecret = process.env.JWT_ACCESS_SECRET || 'dev-only-jwt-secret-change-in-production';
+
+if (nodeEnv === 'production' && (!process.env.JWT_ACCESS_SECRET || jwtSecret.includes('dev-only'))) {
+  throw new Error('FATAL: JWT_ACCESS_SECRET must be set to a strong secret in production.');
+}
+
 export const env = {
-  nodeEnv: process.env.NODE_ENV || 'development',
+  nodeEnv,
   port: Number(process.env.PORT || 4000),
   databaseUrl: process.env.DATABASE_URL || 'postgresql://cab_admin:changeme_in_env@localhost:5432/cab_tracking',
-  jwtSecret: process.env.JWT_ACCESS_SECRET || 'dev-only-jwt-secret-change-in-production',
+  jwtSecret,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
   corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((s) => s.trim()),
   firebaseProjectId: process.env.FIREBASE_PROJECT_ID || '',

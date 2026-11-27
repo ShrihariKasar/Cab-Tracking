@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
+import { ENV } from '../config/env';
 import { Theme } from '../config/theme';
 import { useAuth } from '../contexts/AuthContext';
 import { api } from '../services/api';
@@ -308,6 +310,19 @@ export const LoginScreen: React.FC = () => {
                 />
               </View>
             ) : null}
+
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16, marginTop: 6 }}>
+              <TouchableOpacity
+                onPress={() => Linking.openURL(`${ENV.API_URL.replace(/\/api\/?$/, '')}/privacy-policy`).catch(() => {})}
+              >
+                <Text style={styles.serverToggleText}>Privacy Policy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => Linking.openURL(`${ENV.API_URL.replace(/\/api\/?$/, '')}/terms-and-conditions`).catch(() => {})}
+              >
+                <Text style={styles.serverToggleText}>Terms &amp; Conditions</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </ScrollView>

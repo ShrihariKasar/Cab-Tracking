@@ -51,7 +51,17 @@ export function initTrackingGateway(httpServer: HttpServer): Server {
       const driverId = user.sub;
 
       const rideRes = await pool
-        .query(`SELECT id FROM rides WHERE driver_id = $1 AND status = 'RIDE_STARTED' LIMIT 1`, [driverId])
+        .query(
+          `SELECT r.id
+           FROM rides r
+           JOIN drivers d ON d.id = r.driver_id
+           WHERE r.driver_id = $1
+             AND r.status = 'RIDE_STARTED'
+             AND d.account_status = 'ACTIVE'
+             AND d.consent_status = 'GRANTED'
+           LIMIT 1`,
+          [driverId]
+        )
         .catch(() => ({ rows: [] as any[] }));
       const activeRide = rideRes.rows[0];
       if (!activeRide) return;
@@ -72,7 +82,7 @@ export function initTrackingGateway(httpServer: HttpServer): Server {
              updated_at = NOW()`,
           [driverId, activeRide.id, latitude, longitude, accuracy, capturedAt]
         )
-        .catch(() => {});
+        .catch(() => { });
 
       await pool
         .query(
@@ -80,7 +90,7 @@ export function initTrackingGateway(httpServer: HttpServer): Server {
            VALUES ($1, $2, $3, $4, $5, $6)`,
           [activeRide.id, driverId, latitude, longitude, accuracy, capturedAt]
         )
-        .catch(() => {});
+        .catch(() => { });
 
       io.to('admins').emit('admin:location:updated', {
         driverId,

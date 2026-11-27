@@ -235,4 +235,41 @@ describe('Legal Compliance Audit Tests (DPDP, GDPR Fonts, CIPA, CAN-SPAM)', () =
     expect(secondSend.body.data.sent).toBe(false);
     expect(secondSend.body.data.suppressed).toBe(true);
   });
+
+  it('8. Security headers, Terms & Conditions page, XSS escaping, and data export/deletion work', async () => {
+    const termsRes = await request(app).get('/terms-and-conditions');
+    expect(termsRes.status).toBe(200);
+    expect(termsRes.text).toContain('Terms &amp; Conditions');
+    expect(termsRes.headers['x-content-type-options']).toBe('nosniff');
+    expect(termsRes.headers['x-frame-options']).toBe('DENY');
+    expect(termsRes.headers['permissions-policy']).toContain('geolocation=(self)');
+    expect(termsRes.headers['content-security-policy']).toBeTruthy();
+    expect(MONITOR_HTML).toContain('function esc(');
+
+    const drvToken = signToken({
+      sub: 'drv-1',
+      role: 'DRIVER',
+      mobileNumber: '+15550000002',
+      fullName: 'Driver One',
+    });
+
+    mockQuery
+      .mockResolvedValueOnce({ rows: [{ id: 'drv-1', fullName: 'Driver One' }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    const exportRes = await request(app)
+      .get('/api/compliance/my-data')
+      .set('Authorization', `Bearer ${drvToken}`);
+    expect(exportRes.status).toBe(200);
+    expect(exportRes.body.data.profile.id).toBe('drv-1');
+
+    mockQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    const delRes = await request(app)
+      .delete('/api/compliance/account')
+      .set('Authorization', `Bearer ${drvToken}`);
+    expect(delRes.status).toBe(200);
+    expect(delRes.body.data.deleted).toBe(true);
+  });
 });

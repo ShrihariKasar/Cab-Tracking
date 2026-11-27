@@ -33,6 +33,8 @@ apiRouter.get('/compliance/unsubscribe', complianceCtrl.handleUnsubscribeGet);
 apiRouter.post('/compliance/unsubscribe', complianceCtrl.handleUnsubscribePost);
 apiRouter.post('/compliance/marketing/send', requireAuth, requireAdmin, complianceCtrl.sendMarketingEmailEndpoint);
 apiRouter.get('/compliance/marketing/suppression', requireAuth, requireAdmin, complianceCtrl.checkSuppressionStatus);
+apiRouter.get('/compliance/my-data', requireAuth, complianceCtrl.exportMyData);
+apiRouter.delete('/compliance/account', requireAuth, complianceCtrl.deleteMyAccount);
 
 apiRouter.get('/drivers', requireAuth, requireAdmin, driverCtrl.listDrivers);
 apiRouter.get('/drivers/:id', requireAuth, driverCtrl.getDriverById);
