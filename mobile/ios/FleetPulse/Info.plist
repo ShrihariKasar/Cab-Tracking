@@ -3,16 +3,31 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleDisplayName</key>
-  <string>FleetPulse Cabs</string>
+  <string>FleetPulse</string>
+  <key>CFBundleName</key>
+  <string>FleetPulse</string>
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
   <key>NSLocationWhenInUseUsageDescription</key>
   <string>FleetPulse uses your location to set pickup points and track active rides.</string>
   <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
   <string>Drivers require background location access so active trip tracking continues when the screen is locked or minimized.</string>
+  <key>NSLocationAlwaysUsageDescription</key>
+  <string>Drivers require background location access so active trip tracking continues when the screen is locked or minimized.</string>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <false/>
+  </dict>
   <key>UIBackgroundModes</key>
   <array>
     <string>location</string>
     <string>fetch</string>
     <string>remote-notification</string>
+  </array>
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
   </array>
 </dict>
 </plist>

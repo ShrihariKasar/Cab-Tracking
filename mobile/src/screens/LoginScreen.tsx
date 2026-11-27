@@ -46,6 +46,7 @@ export const LoginScreen: React.FC = () => {
   const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'VERIFY_PARENTAL'>('LOGIN');
   const [fullName, setFullName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [parentName, setParentName] = useState('');
   const [parentContact, setParentContact] = useState('');
   const [consentRecordId, setConsentRecordId] = useState('');
@@ -59,6 +60,10 @@ export const LoginScreen: React.FC = () => {
       Alert.alert('Missing Details', 'Enter full name, mobile number, password, and date of birth (YYYY-MM-DD).');
       return;
     }
+    if (!acceptedTerms) {
+      Alert.alert('Terms Required', 'Please check the box to accept the Terms & Conditions and Privacy Policy.');
+      return;
+    }
     setBusy(true);
     try {
       await saveServerUrl(serverUrl);
@@ -67,6 +72,7 @@ export const LoginScreen: React.FC = () => {
         mobileNumber: mobileNumber.trim(),
         password,
         dateOfBirth: dateOfBirth.trim(),
+        acceptedTerms: true,
         parentName: parentName.trim() || undefined,
         parentContact: parentContact.trim() || undefined,
       });
@@ -188,6 +194,7 @@ export const LoginScreen: React.FC = () => {
               placeholder="+1 555 000 0002"
               placeholderTextColor={Theme.colors.textSecondary}
               keyboardType="phone-pad"
+              textContentType="telephoneNumber"
               style={styles.input}
             />
 
@@ -198,6 +205,7 @@ export const LoginScreen: React.FC = () => {
               placeholder="Enter password"
               placeholderTextColor={Theme.colors.textSecondary}
               secureTextEntry
+              textContentType="password"
               style={styles.input}
             />
 
@@ -251,10 +259,23 @@ export const LoginScreen: React.FC = () => {
                   </>
                 ) : null}
                 <TouchableOpacity
+                  onPress={() => setAcceptedTerms((v) => !v)}
+                  style={styles.checkboxRow}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: acceptedTerms }}
+                >
+                  <View style={[styles.checkboxBox, acceptedTerms && styles.checkboxBoxChecked]}>
+                    {acceptedTerms ? <Text style={styles.checkboxTick}>✓</Text> : null}
+                  </View>
+                  <Text style={styles.checkboxText}>
+                    I agree to the Terms &amp; Conditions and Privacy Policy
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   activeOpacity={0.85}
-                  disabled={busy}
+                  disabled={busy || !acceptedTerms}
                   onPress={handleRegister}
-                  style={[styles.loginBtn, busy && styles.loginBtnDisabled]}
+                  style={[styles.loginBtn, (busy || !acceptedTerms) && styles.loginBtnDisabled]}
                 >
                   <Text style={styles.loginBtnText}>{busy ? 'Registering...' : 'Create Driver Account'}</Text>
                 </TouchableOpacity>
@@ -411,4 +432,26 @@ const styles = StyleSheet.create({
   },
   serverToggleText: { fontSize: 13, fontWeight: '600', color: Theme.colors.textSecondary },
   serverBox: { gap: 8, marginTop: 4 },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
+    minHeight: 40,
+  },
+  checkboxBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  checkboxBoxChecked: {
+    backgroundColor: Theme.colors.primary,
+  },
+  checkboxTick: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  checkboxText: { flex: 1, fontSize: 13, color: Theme.colors.text, fontWeight: '600' },
 });

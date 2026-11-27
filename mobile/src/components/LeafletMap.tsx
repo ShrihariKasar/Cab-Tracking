@@ -168,6 +168,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         originWhitelist={['*']}
         javaScriptEnabled
         domStorageEnabled
+        scrollEnabled={false}
+        bounces={false}
+        overScrollMode="never"
+        allowsInlineMediaPlayback
         onLoadEnd={pushStateToWebView}
         style={styles.webview}
       />

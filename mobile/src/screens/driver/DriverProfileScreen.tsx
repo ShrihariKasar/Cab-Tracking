@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../../components/AppIcon';
 import { StatusPill } from '../../components/StatusPill';
 import { ENV } from '../../config/env';
@@ -17,6 +18,7 @@ import { useResponsive } from '../../utils/responsive';
 
 export const DriverProfileScreen: React.FC = () => {
   const { user, updateUser, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const { horizontalPadding, scaleFont } = useResponsive();
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(user?.fullName || '');
@@ -166,7 +168,10 @@ export const DriverProfileScreen: React.FC = () => {
     <ScrollView
       style={styles.container}
       keyboardShouldPersistTaps="handled"
-      contentContainerStyle={[styles.content, { paddingHorizontal: horizontalPadding }]}
+      contentContainerStyle={[
+        styles.content,
+        { paddingHorizontal: horizontalPadding, paddingTop: Math.max(insets.top, 18) },
+      ]}
     >
       <View style={styles.heroCard}>
         {user?.photoUrl ? (

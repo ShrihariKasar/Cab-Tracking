@@ -39,11 +39,21 @@ describe('Legal Compliance Audit Tests (DPDP, GDPR Fonts, CIPA, CAN-SPAM)', () =
       })
       .mockResolvedValueOnce({ rows: [] }); // consent_records insert
 
+    const noTerms = await request(app).post('/api/auth/register').send({
+      fullName: 'Aarav Sharma',
+      mobileNumber: '+919876543210',
+      password: 'Password@123',
+      dateOfBirth: '1995-04-12',
+      acceptedTerms: false,
+    });
+    expect(noTerms.status).toBe(400);
+
     const res = await request(app).post('/api/auth/register').send({
       fullName: 'Aarav Sharma',
       mobileNumber: '+919876543210',
       password: 'Password@123',
       dateOfBirth: '1995-04-12',
+      acceptedTerms: true,
     });
 
     expect(res.status).toBe(201);
@@ -59,6 +69,7 @@ describe('Legal Compliance Audit Tests (DPDP, GDPR Fonts, CIPA, CAN-SPAM)', () =
       mobileNumber: '+919800000001',
       password: 'Password@123',
       dateOfBirth: '2012-06-15',
+      acceptedTerms: true,
     });
     expect(missingParent.status).toBe(400);
     expect(missingParent.body.requiresParentalConsent).toBe(true);
@@ -84,6 +95,7 @@ describe('Legal Compliance Audit Tests (DPDP, GDPR Fonts, CIPA, CAN-SPAM)', () =
       mobileNumber: '+919800000001',
       password: 'Password@123',
       dateOfBirth: '2012-06-15',
+      acceptedTerms: true,
       parentName: 'Parent Sharma',
       parentContact: 'parent@example.com',
     });

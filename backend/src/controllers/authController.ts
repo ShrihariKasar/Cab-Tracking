@@ -18,6 +18,9 @@ const registerSchema = z.object({
   mobileNumber: z.string().min(6).max(32),
   password: z.string().min(6).max(128),
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'dateOfBirth must be YYYY-MM-DD'),
+  acceptedTerms: z.literal(true, {
+    errorMap: () => ({ message: 'You must accept the Terms & Conditions and Privacy Policy to register.' }),
+  }),
   parentName: z.string().min(2).max(150).optional(),
   parentContact: z.string().min(5).max(150).optional(),
 });

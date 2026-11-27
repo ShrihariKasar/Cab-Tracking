@@ -120,6 +120,16 @@ class GpsService {
     this.state.permissionGranted = granted;
     this.state.permissionDeniedPermanent = !granted;
     this.emit();
+    if (!granted) {
+      Alert.alert(
+        'Location Permission Required',
+        'Please enable Location Access ("Always" or "While Using") in iPhone Settings to share your live ride location.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+    }
     return granted;
   }
 
