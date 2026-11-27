@@ -38,6 +38,12 @@ Corporate cab live GPS tracking application built with **React Native + TypeScri
 | :---: | :---: |
 | <img src="screenshots/live-field-test-monitor.jpg" width="460" alt="Live Field Test Admin Monitor" /> | <img src="screenshots/live-route-osrm-monitor.jpg" width="460" alt="Live Admin Monitor Road-Following Route" /> |
 
+## Updated Mobile App Screenshots
+
+| Place Search & Route Selection | Active Ride Live GPS Sharing | Driver Profile, Vehicle Edit & Privacy Controls |
+| :---: | :---: | :---: |
+| <img src="screenshots/mobile-place-search-updated.png" width="240" alt="Updated Place Search" /> | <img src="screenshots/mobile-active-ride-updated.jpg" width="240" alt="Updated Active Ride Screen" /> | <img src="screenshots/mobile-profile-privacy-updated.jpg" width="240" alt="Updated Driver Profile and Privacy" /> |
+
 ## Mobile App Screenshots
 
 ### Authentication & Driver App (`375×812`)

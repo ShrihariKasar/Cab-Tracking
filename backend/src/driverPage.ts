@@ -95,24 +95,46 @@ export const DRIVER_HTML = `<!doctype html>
     function searchPlaces(target, query) {
       clearTimeout(searchTimer);
       const box = document.getElementById('suggestions');
-      if (!query || query.trim().length < 3) { box.style.display = 'none'; return; }
+      if (!query || query.trim().length < 2) { box.style.display = 'none'; return; }
       searchTimer = setTimeout(async () => {
         try {
-          const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' + encodeURIComponent(query.trim()));
-          const list = await r.json();
-          if (!list.length) { box.style.display = 'none'; return; }
+          const near = lastPt ? '&lat=' + lastPt.latitude + '&lon=' + lastPt.longitude + '&location_bias_scale=0.5' : '';
+          const [phRes, nomRes] = await Promise.allSettled([
+            fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(query.trim()) + '&limit=8' + near).then((r) => r.ok ? r.json() : null),
+            fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=6&q=' + encodeURIComponent(query.trim())).then((r) => r.ok ? r.json() : null)
+          ]);
+          const items = [];
+          const seen = new Set();
+          if (phRes.status === 'fulfilled' && phRes.value && Array.isArray(phRes.value.features)) {
+            phRes.value.features.forEach((f) => {
+              const c = f.geometry && f.geometry.coordinates;
+              const p = f.properties || {};
+              if (!c || c.length < 2) return;
+              const label = [p.name, p.suburb || p.locality || p.village || p.town, p.city || p.county, p.state].filter(Boolean).join(', ');
+              const key = c[1].toFixed(4) + ',' + c[0].toFixed(4);
+              if (label && !seen.has(key)) { seen.add(key); items.push({ label, lat: c[1], lon: c[0] }); }
+            });
+          }
+          if (nomRes.status === 'fulfilled' && Array.isArray(nomRes.value)) {
+            nomRes.value.forEach((n) => {
+              const lat = parseFloat(n.lat), lon = parseFloat(n.lon);
+              const key = lat.toFixed(4) + ',' + lon.toFixed(4);
+              if (!seen.has(key)) { seen.add(key); items.push({ label: n.display_name, lat, lon }); }
+            });
+          }
+          if (!items.length) { box.style.display = 'none'; return; }
           box.innerHTML = '';
-          list.forEach((item) => {
+          items.slice(0, 8).forEach((item) => {
             const btn = document.createElement('button');
             btn.type = 'button';
             btn.style = 'text-align:left;padding:10px 12px;border:none;border-bottom:1px solid #f0f0f0;background:#fff;cursor:pointer;font-size:13px;color:#111';
-            btn.textContent = item.display_name;
+            btn.textContent = item.label;
             btn.onclick = () => {
               if (target === 'pickup') {
-                document.getElementById('pickupInput').value = item.display_name;
+                document.getElementById('pickupInput').value = item.label;
               } else {
-                document.getElementById('destInput').value = item.display_name;
-                selectedDestCoords = { lat: parseFloat(item.lat), lng: parseFloat(item.lon) };
+                document.getElementById('destInput').value = item.label;
+                selectedDestCoords = { lat: item.lat, lng: item.lon };
               }
               box.style.display = 'none';
             };
@@ -120,7 +142,7 @@ export const DRIVER_HTML = `<!doctype html>
           });
           box.style.display = 'flex';
         } catch {}
-      }, 350);
+      }, 200);
     }
 
     async function login() {

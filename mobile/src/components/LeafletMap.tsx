@@ -98,10 +98,14 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         if (routeLine) routeLine.setLatLngs(pts);
         else routeLine = L.polyline(pts, { color: '#2563EB', weight: 5, opacity: 0.9 }).addTo(map);
 
+        const boundsPts = pts.slice();
+        boundsPts.push([v.latitude, v.longitude]);
+        if (payload.start) boundsPts.push([payload.start.latitude, payload.start.longitude]);
+        if (payload.dest) boundsPts.push([payload.dest.latitude, payload.dest.longitude]);
         const bKey = pts.length + ':' + pts[0][0].toFixed(3) + ',' + pts[pts.length - 1][0].toFixed(3);
         if (bKey !== lastBoundsKey) {
           lastBoundsKey = bKey;
-          map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+          map.fitBounds(L.latLngBounds(boundsPts), { padding: [45, 45] });
         }
       } else {
         if (routeLine) { map.removeLayer(routeLine); routeLine = null; }

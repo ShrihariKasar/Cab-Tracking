@@ -58,7 +58,7 @@ export const DriverDashboardScreen: React.FC = () => {
     }
     const near = gps.lastCapturedLocation
       ? { latitude: gps.lastCapturedLocation.latitude, longitude: gps.lastCapturedLocation.longitude }
-      : undefined;
+      : { latitude: lat, longitude: lng };
     searchTimerRef.current = setTimeout(async () => {
       const results = await searchPlaces(text, near);
       setSuggestions(results);
@@ -379,7 +379,10 @@ export const DriverDashboardScreen: React.FC = () => {
                     style={styles.suggestionItem}
                   >
                     <AppIcon name="location" size={14} color={Theme.colors.primary} />
-                    <Text style={styles.suggestionText}>{s.displayName}</Text>
+                    <Text style={styles.suggestionText}>
+                      {s.displayName}
+                      {s.distanceKm !== undefined ? ` (${s.distanceKm} km)` : ''}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>

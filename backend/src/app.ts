@@ -28,6 +28,7 @@ export function createApp() {
             'ws:',
             'https://router.project-osrm.org',
             'https://nominatim.openstreetmap.org',
+            'https://photon.komoot.io',
           ],
           frameAncestors: ["'none'"],
         },
