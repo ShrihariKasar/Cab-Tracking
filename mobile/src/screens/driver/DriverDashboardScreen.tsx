@@ -36,6 +36,7 @@ export const DriverDashboardScreen: React.FC = () => {
   const [rideStarted, setRideStarted] = useState(false);
   const [pickupAddress, setPickupAddress] = useState('');
   const [destinationAddress, setDestinationAddress] = useState('');
+  const [startCoords, setStartCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [destCoords, setDestCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [routeCoords, setRouteCoords] = useState<LatLngPoint[]>([]);
   const [activeField, setActiveField] = useState<'pickup' | 'dest' | null>(null);
@@ -61,7 +62,7 @@ export const DriverDashboardScreen: React.FC = () => {
     searchTimerRef.current = setTimeout(async () => {
       const results = await searchPlaces(text, near);
       setSuggestions(results);
-    }, 300);
+    }, 180);
   };
 
   const handleUseCurrentLocation = async () => {
@@ -94,10 +95,33 @@ export const DriverDashboardScreen: React.FC = () => {
 
   useEffect(() => {
     const unsub = gpsService.subscribe(setGps);
-    gpsService.checkAndRequestPermissions();
+    gpsService.checkAndRequestPermissions().then((ok) => {
+      if (ok) {
+        gpsService.getCurrentPosition().catch(() => {});
+      }
+    });
     gpsService.checkConnectivity();
+    if (user?.id) {
+      api
+        .get(`/drivers/${user.id}`)
+        .then((res) => {
+          const d = res.data?.data;
+          if (d?.rideStatus === 'RIDE_STARTED') {
+            setRideStarted(true);
+            if (d.pickupAddress) setPickupAddress(d.pickupAddress);
+            if (d.destinationAddress) setDestinationAddress(d.destinationAddress);
+            if (d.latitude && d.longitude) {
+              setStartCoords({ latitude: d.latitude, longitude: d.longitude });
+            }
+            if (d.destinationLatitude && d.destinationLongitude) {
+              setDestCoords({ latitude: d.destinationLatitude, longitude: d.destinationLongitude });
+            }
+          }
+        })
+        .catch(() => {});
+    }
     return unsub;
-  }, []);
+  }, [user?.id]);
 
   const pulseStatus = () => {
     Animated.sequence([
@@ -107,7 +131,7 @@ export const DriverDashboardScreen: React.FC = () => {
   };
 
   const handleStartRide = async () => {
-    if (!user) return;
+    if (!user || busy || rideStarted) return;
     setBusy(true);
     try {
       const hasPerm = await gpsService.checkAndRequestPermissions();
@@ -140,11 +164,20 @@ export const DriverDashboardScreen: React.FC = () => {
         destinationLatitude: destCoords?.latitude,
         destinationLongitude: destCoords?.longitude,
       });
+      setStartCoords({ latitude: currentCoords.latitude, longitude: currentCoords.longitude });
       await gpsService.startRideTracking(user.id);
       setRideStarted(true);
+      setActiveField(null);
+      setSuggestions([]);
+      Keyboard?.dismiss?.();
       pulseStatus();
     } catch (err: any) {
-      Alert.alert('Start Ride Error', err?.response?.data?.message || 'Unable to start ride.');
+      if (err?.response?.status === 409) {
+        setRideStarted(true);
+        Alert.alert('Ride Already Active', 'You already have an active ride in progress.');
+      } else {
+        Alert.alert('Start Ride Error', err?.response?.data?.message || 'Unable to start ride.');
+      }
     } finally {
       setBusy(false);
     }
@@ -236,6 +269,9 @@ export const DriverDashboardScreen: React.FC = () => {
         >
           {routeCoords.length > 1 ? (
             <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
+          ) : null}
+          {rideStarted && startCoords ? (
+            <Marker coordinate={startCoords} title="Start" description={pickupAddress || 'Start'} pinColor="green" />
           ) : null}
           {destCoords ? (
             <Marker coordinate={destCoords} title="Destination" description={destinationAddress} pinColor="red" />

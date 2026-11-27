@@ -19,12 +19,29 @@ export const DriverProfileScreen: React.FC = () => {
   const { horizontalPadding, scaleFont } = useResponsive();
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(user?.fullName || '');
+  const [regNumber, setRegNumber] = useState(user?.vehicle?.registrationNumber || '');
+  const [carModel, setCarModel] = useState(user?.vehicle?.model || '');
+  const [carColour, setCarColour] = useState(user?.vehicle?.colour || '');
   const [saving, setSaving] = useState(false);
+  const [rideHistory, setRideHistory] = useState<
+    Array<{
+      id: string;
+      status: string;
+      startTime: string;
+      endTime?: string | null;
+      pickupAddress?: string | null;
+      destinationAddress?: string | null;
+    }>
+  >([]);
   const [privacyPrefs, setPrivacyPrefs] = useState<PrivacyPreferences>(getPrivacyPreferences());
 
   useEffect(() => {
     if (user?.id) {
       loadPrivacyPreferences(user.id).then(setPrivacyPrefs);
+      api
+        .get('/rides/history')
+        .then((res) => setRideHistory(res.data?.data || []))
+        .catch(() => {});
     }
   }, [user?.id]);
 
@@ -102,10 +119,33 @@ export const DriverProfileScreen: React.FC = () => {
     if (!user || !fullName.trim()) return;
     setSaving(true);
     try {
-      await api.patch(`/drivers/${user.id}`, { fullName: fullName.trim() });
-      updateUser({ ...user, fullName: fullName.trim() });
+      const hasVehicle = regNumber.trim() && carModel.trim() && carColour.trim();
+      await api.patch(`/drivers/${user.id}`, {
+        fullName: fullName.trim(),
+        ...(hasVehicle
+          ? {
+              vehicle: {
+                registrationNumber: regNumber.trim(),
+                model: carModel.trim(),
+                colour: carColour.trim(),
+              },
+            }
+          : {}),
+      });
+      updateUser({
+        ...user,
+        fullName: fullName.trim(),
+        vehicle: hasVehicle
+          ? {
+              id: user.vehicle?.id || 'updated',
+              registrationNumber: regNumber.trim(),
+              model: carModel.trim(),
+              colour: carColour.trim(),
+            }
+          : user.vehicle,
+      });
       setEditing(false);
-      Alert.alert('Profile Updated', 'Your name has been updated.');
+      Alert.alert('Profile Updated', 'Your profile and vehicle details have been updated.');
     } catch (err: any) {
       Alert.alert('Update Failed', err?.response?.data?.message || 'Unable to update profile.');
     } finally {
@@ -155,7 +195,15 @@ export const DriverProfileScreen: React.FC = () => {
         </View>
         {editing ? (
           <>
-            <TextInput value={fullName} onChangeText={setFullName} style={styles.input} />
+            <TextInput value={fullName} onChangeText={setFullName} placeholder="Full Name" style={styles.input} />
+            <TextInput
+              value={regNumber}
+              onChangeText={setRegNumber}
+              placeholder="Vehicle Registration (e.g. MH-12-AB-1234)"
+              style={styles.input}
+            />
+            <TextInput value={carModel} onChangeText={setCarModel} placeholder="Vehicle Model (e.g. Swift Dzire)" style={styles.input} />
+            <TextInput value={carColour} onChangeText={setCarColour} placeholder="Vehicle Colour (e.g. White)" style={styles.input} />
             <View style={styles.actionRow}>
               <TouchableOpacity onPress={handleSave} disabled={saving} style={[styles.blackBtn, styles.actionBtn]}>
                 <Text style={styles.blackBtnText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
@@ -170,8 +218,29 @@ export const DriverProfileScreen: React.FC = () => {
           </>
         ) : (
           <TouchableOpacity onPress={() => setEditing(true)} style={styles.blackBtn}>
-            <Text style={styles.blackBtnText}>Edit Profile</Text>
+            <Text style={styles.blackBtnText}>Edit Profile &amp; Vehicle</Text>
           </TouchableOpacity>
+        )}
+      </View>
+
+      <View style={[styles.card, Theme.shadow.card]}>
+        <View style={styles.cardHeader}>
+          <AppIcon name="clock" size={18} color={Theme.colors.text} />
+          <Text style={styles.sectionTitle}>Ride History</Text>
+        </View>
+        {rideHistory.length === 0 ? (
+          <Text style={styles.infoLabel}>No rides recorded yet.</Text>
+        ) : (
+          rideHistory.slice(0, 10).map((item) => (
+            <View key={item.id} style={{ paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: Theme.colors.border }}>
+              <Text style={styles.infoVal}>
+                {(item.pickupAddress || 'GPS Start') + (item.destinationAddress ? ` → ${item.destinationAddress}` : '')}
+              </Text>
+              <Text style={styles.infoLabel}>
+                {item.status === 'RIDE_STARTED' ? 'Active' : 'Completed'} • {new Date(item.startTime).toLocaleString()}
+              </Text>
+            </View>
+          ))
         )}
       </View>
 

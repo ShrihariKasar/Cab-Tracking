@@ -132,31 +132,43 @@ class GpsService {
   }
 
   getCurrentPosition(): Promise<GpsPoint> {
-    return new Promise((resolve, reject) => {
-      Geolocation.getCurrentPosition(
-        (pos) => {
-          this.state.gpsEnabled = true;
-          const pt: GpsPoint = {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracy: pos.coords.accuracy ?? 0,
-            capturedAt: new Date(pos.timestamp).toISOString(),
-          };
-          this.state.lastCapturedLocation = pt;
-          this.emit();
-          resolve(pt);
-        },
-        (err) => {
-          if (err.code === 2 || err.code === 1) {
-            this.state.gpsEnabled = false;
-            this.state.statusMessage = 'GPS unavailable';
+    if (this.state.lastCapturedLocation) {
+      const ageMs = Date.now() - new Date(this.state.lastCapturedLocation.capturedAt).getTime();
+      if (ageMs >= 0 && ageMs < 20000) {
+        return Promise.resolve(this.state.lastCapturedLocation);
+      }
+    }
+
+    const requestOnce = (highAccuracy: boolean, timeoutMs: number, maxAgeMs: number) =>
+      new Promise<GpsPoint>((resolve, reject) => {
+        Geolocation.getCurrentPosition(
+          (pos) => {
+            this.state.gpsEnabled = true;
+            const pt: GpsPoint = {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy ?? 0,
+              capturedAt: new Date(pos.timestamp).toISOString(),
+            };
+            this.state.lastCapturedLocation = pt;
             this.emit();
-          }
-          reject(err);
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
-      );
-    });
+            resolve(pt);
+          },
+          (err) => reject(err),
+          { enableHighAccuracy: highAccuracy, timeout: timeoutMs, maximumAge: maxAgeMs }
+        );
+      });
+
+    return requestOnce(true, 3500, 15000).catch(() =>
+      requestOnce(false, 2500, 30000).catch((err) => {
+        if (err?.code === 2 || err?.code === 1) {
+          this.state.gpsEnabled = false;
+          this.state.statusMessage = 'GPS unavailable';
+          this.emit();
+        }
+        throw err;
+      })
+    );
   }
 
   async startRideTracking(driverId: string): Promise<void> {
@@ -193,7 +205,7 @@ class GpsService {
           (pos) => {
             this.state.gpsEnabled = true;
             const now = Date.now();
-            if (now - this.lastEmitMs < 4500) return;
+            if (now - this.lastEmitMs < 2000) return;
             this.lastEmitMs = now;
 
             const pt: GpsPoint = {
@@ -212,9 +224,9 @@ class GpsService {
           },
           {
             enableHighAccuracy: true,
-            distanceFilter: 10,
-            interval: 5000,
-            fastestInterval: 4000,
+            distanceFilter: 5,
+            interval: 2500,
+            fastestInterval: 1500,
             showsBackgroundLocationIndicator: true,
             forceRequestLocation: false,
           }

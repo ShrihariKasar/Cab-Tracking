@@ -44,5 +44,6 @@ apiRouter.get('/drivers/:id/location', requireAuth, requireAdmin, driverCtrl.get
 
 apiRouter.post('/rides/start', requireAuth, rideCtrl.startRide);
 apiRouter.post('/rides/end', requireAuth, rideCtrl.endRide);
+apiRouter.get('/rides/history', requireAuth, rideCtrl.getRideHistory);
 apiRouter.get('/rides/active', requireAuth, requireAdmin, rideCtrl.getActiveRides);
 apiRouter.get('/rides/:id/route', requireAuth, requireAdmin, rideCtrl.getRideRoute);

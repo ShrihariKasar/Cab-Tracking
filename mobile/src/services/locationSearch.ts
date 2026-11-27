@@ -38,6 +38,8 @@ function formatPhotonLabel(p: NonNullable<PhotonFeature['properties']>): string 
   return Array.from(new Set(parts)).join(', ');
 }
 
+const searchCache = new Map<string, PlaceSuggestion[]>();
+
 export async function searchPlaces(
   query: string,
   near?: { latitude: number; longitude: number }
@@ -45,14 +47,28 @@ export async function searchPlaces(
   const trimmed = query.trim();
   if (trimmed.length < 2) return [];
 
+  const cacheKey = `${trimmed.toLowerCase()}|${near ? `${near.latitude.toFixed(2)},${near.longitude.toFixed(2)}` : ''}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached) return cached;
+
   const bias = near ? `&lat=${near.latitude}&lon=${near.longitude}` : '';
   const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(trimmed)}&limit=8${bias}`;
   const nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&extratags=1&dedupe=0&limit=8&q=${encodeURIComponent(trimmed)}`;
 
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 3500) : null;
+
   const [photonRes, nomRes] = await Promise.allSettled([
-    fetch(photonUrl, { headers: { 'User-Agent': 'FleetPulseCabApp/1.0' } }).then((r) => (r.ok ? r.json() : null)),
-    fetch(nominatimUrl, { headers: { 'User-Agent': 'FleetPulseCabApp/1.0' } }).then((r) => (r.ok ? r.json() : null)),
+    fetch(photonUrl, {
+      headers: { 'User-Agent': 'FleetPulseCabApp/1.0' },
+      signal: controller?.signal,
+    }).then((r) => (r.ok ? r.json() : null)),
+    fetch(nominatimUrl, {
+      headers: { 'User-Agent': 'FleetPulseCabApp/1.0' },
+      signal: controller?.signal,
+    }).then((r) => (r.ok ? r.json() : null)),
   ]);
+  if (timer) clearTimeout(timer);
 
   const results: PlaceSuggestion[] = [];
   const seen = new Set<string>();
@@ -99,7 +115,9 @@ export async function searchPlaces(
     }
   }
 
-  return results.slice(0, 10);
+  const sliced = results.slice(0, 10);
+  searchCache.set(cacheKey, sliced);
+  return sliced;
 }
 
 export async function reverseGeocode(latitude: number, longitude: number): Promise<string> {

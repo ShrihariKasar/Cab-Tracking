@@ -223,3 +223,38 @@ export async function getRideRoute(req: Request, res: Response, next: NextFuncti
     next(err);
   }
 }
+
+export async function getRideHistory(req: Request, res: Response, next: NextFunction) {
+  try {
+    const user = req.user!;
+    if (user.role === 'DRIVER') {
+      const r = await pool.query(
+        `SELECT r.id, r.status, r.start_time AS "startTime", r.end_time AS "endTime",
+                r.start_latitude AS "startLat", r.start_longitude AS "startLng",
+                r.end_latitude AS "endLat", r.end_longitude AS "endLng",
+                r.pickup_address AS "pickupAddress", r.destination_address AS "destinationAddress",
+                r.destination_latitude AS "destinationLat", r.destination_longitude AS "destinationLng"
+         FROM rides r
+         WHERE r.driver_id = $1
+         ORDER BY r.start_time DESC
+         LIMIT 50`,
+        [user.sub]
+      );
+      return res.json({ success: true, data: r.rows });
+    }
+
+    const r = await pool.query(
+      `SELECT r.id, r.driver_id AS "driverId", r.status, r.start_time AS "startTime", r.end_time AS "endTime",
+              r.pickup_address AS "pickupAddress", r.destination_address AS "destinationAddress",
+              d.full_name AS "driverName", v.registration_number AS "vehicleRegistration"
+       FROM rides r
+       JOIN drivers d ON d.id = r.driver_id
+       LEFT JOIN vehicles v ON v.id = r.vehicle_id
+       ORDER BY r.start_time DESC
+       LIMIT 50`
+    );
+    return res.json({ success: true, data: r.rows });
+  } catch (err) {
+    next(err);
+  }
+}

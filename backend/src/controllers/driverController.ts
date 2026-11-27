@@ -79,6 +79,13 @@ export async function updateDriverProfile(req: Request, res: Response, next: Nex
         photoUrl: z.string().url().nullable().optional(),
         internetConnected: z.boolean().optional(),
         gpsEnabled: z.boolean().optional(),
+        vehicle: z
+          .object({
+            registrationNumber: z.string().trim().min(2).max(32),
+            model: z.string().trim().min(1).max(100),
+            colour: z.string().trim().min(1).max(40),
+          })
+          .optional(),
       })
       .parse(req.body);
 
@@ -92,6 +99,20 @@ export async function updateDriverProfile(req: Request, res: Response, next: Nex
        WHERE id = $5`,
       [body.fullName ?? null, body.photoUrl ?? null, body.internetConnected ?? null, body.gpsEnabled ?? null, id]
     );
+
+    if (body.vehicle) {
+      await pool.query(
+        `INSERT INTO vehicles (driver_id, registration_number, model, colour)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (driver_id) DO UPDATE SET
+           registration_number = EXCLUDED.registration_number,
+           model = EXCLUDED.model,
+           colour = EXCLUDED.colour,
+           updated_at = NOW()`,
+        [id, body.vehicle.registrationNumber, body.vehicle.model, body.vehicle.colour]
+      );
+    }
+
     res.json({ success: true });
   } catch (err) {
     next(err);
@@ -177,6 +198,7 @@ export async function getDriverLocation(req: Request, res: Response, next: NextF
               d.internet_connected AS "internetConnected", d.gps_enabled AS "gpsEnabled",
               v.registration_number AS "vehicleRegistration", v.model AS "vehicleModel",
               r.status AS "rideStatus", r.start_time AS "rideStartTime",
+              r.start_latitude AS "startLatitude", r.start_longitude AS "startLongitude",
               r.pickup_address AS "pickupAddress", r.destination_address AS "destinationAddress",
               r.destination_latitude AS "destinationLatitude", r.destination_longitude AS "destinationLongitude"
        FROM drivers d

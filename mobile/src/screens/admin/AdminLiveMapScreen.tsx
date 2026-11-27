@@ -25,6 +25,8 @@ interface DriverLocationPayload {
   gpsEnabled?: boolean;
   rideStatus?: string | null;
   rideStartTime?: string | null;
+  startLatitude?: number | null;
+  startLongitude?: number | null;
   pickupAddress?: string | null;
   destinationAddress?: string | null;
   destinationLatitude?: number | null;
@@ -179,6 +181,14 @@ export const AdminLiveMapScreen: React.FC<{ driverId: string; onBack: () => void
         ) : null}
         {routeCoords.length > 1 ? (
           <Polyline coordinates={routeCoords} strokeColor="#2563EB" strokeWidth={4} />
+        ) : null}
+        {info?.startLatitude && info?.startLongitude ? (
+          <Marker
+            coordinate={{ latitude: info.startLatitude, longitude: info.startLongitude }}
+            title="Start"
+            description={info.pickupAddress || 'Start'}
+            pinColor="green"
+          />
         ) : null}
         {info?.destinationLatitude && info?.destinationLongitude ? (
           <Marker
