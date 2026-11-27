@@ -2,6 +2,15 @@
 
 Corporate cab live GPS tracking application built with **React Native + TypeScript** (shared Driver & Admin mobile app), **Node.js + Express + Socket.IO**, **PostgreSQL** (with embedded `@electric-sql/pglite` support for zero-install local runs), and **Firebase Cloud Messaging**.
 
+## Live Hosted Links (Production Backend — Render)
+
+- **Driver Web Portal:** https://fleetpulse-backend-w864.onrender.com/driver
+- **Admin Live Monitor:** https://fleetpulse-backend-w864.onrender.com/monitor
+- **API Base URL:** `https://fleetpulse-backend-w864.onrender.com/api` (default in the mobile app)
+- **Health Check:** https://fleetpulse-backend-w864.onrender.com/api/health
+- **Privacy Policy:** https://fleetpulse-backend-w864.onrender.com/privacy-policy
+- **Terms & Conditions:** https://fleetpulse-backend-w864.onrender.com/terms-and-conditions
+
 ## Monorepo Structure
 
 - `mobile/` — Shared React Native + TypeScript app (Driver & Admin roles, background GPS tracking, offline queue, Keychain/Keystore token storage, Google Maps, runtime Server URL config)
@@ -25,16 +34,13 @@ Corporate cab live GPS tracking application built with **React Native + TypeScri
    - **Admin:** `+15550000001` / `Admin@1234`
    - **Driver:** `+15550000002` / `Driver@1234` (`KA-01-AB-1234`)
 
-2. **Start Backend & Public HTTPS Tunnel**:
-   ```powershell
-   .\scripts\start-field-test.ps1
-   ```
-   - **Laptop (Admin Live Map):** Open `http://localhost:4000/monitor`
-   - **Phone (Driver GPS Tracker):** Open the `https://....trycloudflare.com` URL in your mobile browser (or paste it into **Configure Server URL** in the React Native app) and tap **START RIDE**.
+2. **Open Live Portals**:
+   - **Laptop (Admin Live Map):** Open https://fleetpulse-backend-w864.onrender.com/monitor
+   - **Phone (Driver GPS Tracker):** Open https://fleetpulse-backend-w864.onrender.com/driver (or use the FleetPulse mobile app) and tap **START RIDE**.
 
 ## Live Field-Test Screenshots
 
-| Laptop Admin Monitor (`http://localhost:4000/monitor` receiving live 4G GPS from phone) | Road-Following OSRM Route (`https://fleetpulse-backend-w864.onrender.com/monitor`) |
+| Laptop Admin Monitor (receiving live 4G GPS from phone) | Road-Following OSRM Route (`https://fleetpulse-backend-w864.onrender.com/monitor`) |
 | :---: | :---: |
 | <img src="screenshots/live-field-test-monitor.jpg" width="460" alt="Live Field Test Admin Monitor" /> | <img src="screenshots/live-route-osrm-monitor.jpg" width="460" alt="Live Admin Monitor Road-Following Route" /> |
 
