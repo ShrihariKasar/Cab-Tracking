@@ -7,9 +7,13 @@ import { pool } from './pool.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function migrate() {
-  const sql = fs.readFileSync(path.join(__dirname, 'migrations', '001_mvp_schema.sql'), 'utf8');
-  await pool.query(sql);
-  console.log('MVP database schema applied successfully.');
+  const migrationsDir = path.join(__dirname, 'migrations');
+  const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
+  for (const file of files) {
+    const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+    await pool.query(sql);
+  }
+  console.log('Database schemas applied successfully:', files.join(', '));
 
   const countRes = await pool.query(`SELECT COUNT(*)::int AS cnt FROM admins`);
   if ((countRes.rows[0]?.cnt ?? 0) === 0) {

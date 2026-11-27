@@ -14,9 +14,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppIcon } from '../components/AppIcon';
 import { Theme } from '../config/theme';
 import { useAuth } from '../contexts/AuthContext';
+import { api } from '../services/api';
 import { getServerUrl, saveServerUrl } from '../services/secureStorage';
 import type { UserRole } from '../types';
 import { useResponsive } from '../utils/responsive';
+
+function isDobUnder18(dob: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob.trim());
+  if (!m) return false;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const now = new Date();
+  let age = now.getUTCFullYear() - y;
+  const md = now.getUTCMonth() - (mo - 1);
+  if (md < 0 || (md === 0 && now.getUTCDate() < d)) age--;
+  return age < 18;
+}
 
 export const LoginScreen: React.FC = () => {
   const { login } = useAuth();
@@ -26,9 +40,71 @@ export const LoginScreen: React.FC = () => {
   const [role, setRole] = useState<UserRole>('DRIVER');
   const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<'LOGIN' | 'REGISTER' | 'VERIFY_PARENTAL'>('LOGIN');
+  const [fullName, setFullName] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [parentName, setParentName] = useState('');
+  const [parentContact, setParentContact] = useState('');
+  const [consentRecordId, setConsentRecordId] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
   const [serverUrl, setServerUrl] = useState('');
   const [showServerConfig, setShowServerConfig] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  const handleRegister = async () => {
+    if (!fullName.trim() || !mobileNumber.trim() || !password || !dateOfBirth.trim()) {
+      Alert.alert('Missing Details', 'Enter full name, mobile number, password, and date of birth (YYYY-MM-DD).');
+      return;
+    }
+    setBusy(true);
+    try {
+      await saveServerUrl(serverUrl);
+      const res = await api.post('/auth/register', {
+        fullName: fullName.trim(),
+        mobileNumber: mobileNumber.trim(),
+        password,
+        dateOfBirth: dateOfBirth.trim(),
+        parentName: parentName.trim() || undefined,
+        parentContact: parentContact.trim() || undefined,
+      });
+      const data = res.data?.data;
+      if (data?.requiresParentalConsent) {
+        setConsentRecordId(data.consentRecordId);
+        setMode('VERIFY_PARENTAL');
+        Alert.alert(
+          'Parental Consent Required',
+          `Reference ${data.verificationReference}: Enter the 6-digit verification code sent to the parent/guardian.`
+        );
+      } else {
+        await login(mobileNumber.trim(), password, 'DRIVER');
+      }
+    } catch (err: any) {
+      Alert.alert('Registration Failed', err?.response?.data?.message || 'Unable to register.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleVerifyParental = async () => {
+    if (!consentRecordId || !verificationCode.trim()) {
+      Alert.alert('Missing Code', 'Enter the 6-digit parental verification code.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await api.post('/compliance/parental-consent/verify', {
+        consentRecordId,
+        verificationCode: verificationCode.trim(),
+      });
+      Alert.alert('Consent Verified', 'Parental consent verified. You can now sign in.');
+      setMode('LOGIN');
+      setVerificationCode('');
+    } catch (err: any) {
+      Alert.alert('Verification Failed', err?.response?.data?.message || 'Invalid verification code.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     getServerUrl().then((saved) => {
@@ -117,16 +193,96 @@ export const LoginScreen: React.FC = () => {
               style={styles.input}
             />
 
-            <TouchableOpacity
-              activeOpacity={0.85}
-              disabled={busy}
-              onPress={handleLogin}
-              style={[styles.loginBtn, busy && styles.loginBtnDisabled]}
-            >
-              <Text style={styles.loginBtnText}>
-                {busy ? 'Signing in...' : `Continue as ${role === 'DRIVER' ? 'Driver' : 'Admin'}`}
-              </Text>
-            </TouchableOpacity>
+            {mode === 'LOGIN' ? (
+              <TouchableOpacity
+                activeOpacity={0.85}
+                disabled={busy}
+                onPress={handleLogin}
+                style={[styles.loginBtn, busy && styles.loginBtnDisabled]}
+              >
+                <Text style={styles.loginBtnText}>
+                  {busy ? 'Signing in...' : `Continue as ${role === 'DRIVER' ? 'Driver' : 'Admin'}`}
+                </Text>
+              </TouchableOpacity>
+            ) : mode === 'REGISTER' ? (
+              <>
+                <Text style={styles.label}>Full Name</Text>
+                <TextInput
+                  value={fullName}
+                  onChangeText={setFullName}
+                  placeholder="Driver full name"
+                  placeholderTextColor={Theme.colors.textSecondary}
+                  style={styles.input}
+                />
+                <Text style={styles.label}>Date of Birth (YYYY-MM-DD)</Text>
+                <TextInput
+                  value={dateOfBirth}
+                  onChangeText={setDateOfBirth}
+                  placeholder="1998-05-20"
+                  placeholderTextColor={Theme.colors.textSecondary}
+                  style={styles.input}
+                />
+                {isDobUnder18(dateOfBirth) ? (
+                  <>
+                    <Text style={styles.label}>Parent / Guardian Full Name</Text>
+                    <TextInput
+                      value={parentName}
+                      onChangeText={setParentName}
+                      placeholder="Parent / Guardian name"
+                      placeholderTextColor={Theme.colors.textSecondary}
+                      style={styles.input}
+                    />
+                    <Text style={styles.label}>Parent / Guardian Contact</Text>
+                    <TextInput
+                      value={parentContact}
+                      onChangeText={setParentContact}
+                      placeholder="Parent email or mobile"
+                      placeholderTextColor={Theme.colors.textSecondary}
+                      style={styles.input}
+                    />
+                  </>
+                ) : null}
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  disabled={busy}
+                  onPress={handleRegister}
+                  style={[styles.loginBtn, busy && styles.loginBtnDisabled]}
+                >
+                  <Text style={styles.loginBtnText}>{busy ? 'Registering...' : 'Create Driver Account'}</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={styles.label}>Parental Verification Code</Text>
+                <TextInput
+                  value={verificationCode}
+                  onChangeText={setVerificationCode}
+                  placeholder="6-digit code"
+                  placeholderTextColor={Theme.colors.textSecondary}
+                  keyboardType="number-pad"
+                  style={styles.input}
+                />
+                <TouchableOpacity
+                  activeOpacity={0.85}
+                  disabled={busy}
+                  onPress={handleVerifyParental}
+                  style={[styles.loginBtn, busy && styles.loginBtnDisabled]}
+                >
+                  <Text style={styles.loginBtnText}>{busy ? 'Verifying...' : 'Verify Parental Consent'}</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {role === 'DRIVER' ? (
+              <TouchableOpacity
+                onPress={() => setMode((m) => (m === 'LOGIN' ? 'REGISTER' : 'LOGIN'))}
+                style={styles.serverToggle}
+              >
+                <Text style={styles.serverToggleText}>
+                  {mode === 'LOGIN' ? 'New Driver? Register with Age Verification' : 'Back to Sign In'}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
 
             <TouchableOpacity
               onPress={() => setShowServerConfig((v) => !v)}

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as authCtrl from '../controllers/authController.js';
+import * as complianceCtrl from '../controllers/complianceController.js';
 import * as driverCtrl from '../controllers/driverController.js';
 import * as rideCtrl from '../controllers/rideController.js';
 import { pool } from '../database/pool.js';
@@ -17,6 +18,21 @@ apiRouter.get('/health', async (_req, res) => {
 });
 
 apiRouter.post('/auth/login', authCtrl.login);
+apiRouter.post('/auth/register', authCtrl.register);
+
+apiRouter.post('/compliance/parental-consent/verify', complianceCtrl.verifyParentalConsent);
+apiRouter.post('/compliance/consent/withdraw', (req, res, next) => {
+  if (req.headers.authorization?.startsWith('Bearer ')) {
+    return requireAuth(req, res, () => complianceCtrl.withdrawConsent(req, res, next));
+  }
+  return complianceCtrl.withdrawConsent(req, res, next);
+});
+apiRouter.get('/compliance/privacy-preferences', complianceCtrl.getPrivacyPreferences);
+apiRouter.post('/compliance/privacy-preferences', complianceCtrl.savePrivacyPreferences);
+apiRouter.get('/compliance/unsubscribe', complianceCtrl.handleUnsubscribeGet);
+apiRouter.post('/compliance/unsubscribe', complianceCtrl.handleUnsubscribePost);
+apiRouter.post('/compliance/marketing/send', requireAuth, requireAdmin, complianceCtrl.sendMarketingEmailEndpoint);
+apiRouter.get('/compliance/marketing/suppression', requireAuth, requireAdmin, complianceCtrl.checkSuppressionStatus);
 
 apiRouter.get('/drivers', requireAuth, requireAdmin, driverCtrl.listDrivers);
 apiRouter.get('/drivers/:id', requireAuth, driverCtrl.getDriverById);

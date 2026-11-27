@@ -6,7 +6,7 @@ export const DRIVER_HTML = `<!doctype html>
   <title>FleetPulse — Driver Live Tracker</title>
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; display: flex; flex-direction: column; }
+    body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; display: flex; flex-direction: column; }
     header { background: #000; color: #fff; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; }
     .brand { font-weight: 800; font-size: 18px; }
     .pill { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #262626; color: #fff; }
@@ -53,8 +53,36 @@ export const DRIVER_HTML = `<!doctype html>
     </div>
   </main>
 
+  <footer style="padding:10px 16px;font-size:12px;color:#525252;text-align:center;border-top:1px solid #e5e5e5;background:#fff">
+    Analytics &amp; Session Replay: <strong id="privState">Disabled (Default)</strong> •
+    <a href="/privacy-policy" style="color:#111;font-weight:600">Privacy Policy</a> •
+    <button type="button" onclick="togglePrivacyConsent()" style="background:none;border:none;color:#111;font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Privacy Preferences</button>
+  </footer>
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    let analyticsConsent = false;
+    let sessionReplayConsent = false;
+    const privSubjectKey = localStorage.getItem('fp_priv_key') || ('web-' + Math.random().toString(36).slice(2, 10));
+    localStorage.setItem('fp_priv_key', privSubjectKey);
+    fetch('/api/compliance/privacy-preferences?subjectKey=' + encodeURIComponent(privSubjectKey))
+      .then((r) => r.json())
+      .then((j) => {
+        if (j && j.data) {
+          analyticsConsent = Boolean(j.data.analyticsConsent);
+          sessionReplayConsent = Boolean(j.data.sessionReplayConsent);
+          document.getElementById('privState').textContent = analyticsConsent ? 'Enabled (Opted In)' : 'Disabled (Default)';
+        }
+      }).catch(() => {});
+    async function togglePrivacyConsent() {
+      analyticsConsent = !analyticsConsent;
+      sessionReplayConsent = false;
+      await fetch('/api/compliance/privacy-preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subjectKey: privSubjectKey, analyticsConsent, sessionReplayConsent })
+      });
+      document.getElementById('privState').textContent = analyticsConsent ? 'Enabled (Opted In)' : 'Disabled (Default)';
+    }
     let token = '';
     let socket = null;
     let watchId = null;

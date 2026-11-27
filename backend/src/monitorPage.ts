@@ -7,7 +7,7 @@ export const MONITOR_HTML = `<!doctype html>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: Inter, system-ui, sans-serif; background: #f5f5f5; color: #111; display: flex; flex-direction: column; height: 100vh; }
+    body { margin: 0; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f5f5f5; color: #111; display: flex; flex-direction: column; height: 100vh; }
     header { background: #000; color: #fff; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
     .brand { font-weight: 800; font-size: 18px; }
     .pill { padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 700; background: #262626; color: #fff; }
@@ -44,6 +44,10 @@ export const MONITOR_HTML = `<!doctype html>
     </aside>
     <div id="map"></div>
   </main>
+  <footer style="padding:6px 16px;font-size:11px;color:#525252;display:flex;justify-content:space-between;background:#fff;border-top:1px solid #e5e5e5">
+    <span>Analytics &amp; Session Replay: <strong id="monPrivState">Disabled (Default)</strong></span>
+    <span><a href="/privacy-policy" style="color:#111;font-weight:600">Privacy Policy</a> • <button type="button" onclick="toggleMonitorPrivacy()" style="background:none;border:none;color:#111;font-weight:700;cursor:pointer;text-decoration:underline;padding:0">Privacy Preferences</button></span>
+  </footer>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/socket.io/socket.io.js"></script>
@@ -207,6 +211,26 @@ export const MONITOR_HTML = `<!doctype html>
           loadDrivers();
         }
       });
+    }
+    let monAnalyticsConsent = false;
+    const monPrivKey = localStorage.getItem('fp_priv_key') || ('mon-' + Math.random().toString(36).slice(2, 10));
+    localStorage.setItem('fp_priv_key', monPrivKey);
+    fetch('/api/compliance/privacy-preferences?subjectKey=' + encodeURIComponent(monPrivKey))
+      .then((r) => r.json())
+      .then((j) => {
+        if (j && j.data) {
+          monAnalyticsConsent = Boolean(j.data.analyticsConsent);
+          document.getElementById('monPrivState').textContent = monAnalyticsConsent ? 'Enabled (Opted In)' : 'Disabled (Default)';
+        }
+      }).catch(() => {});
+    async function toggleMonitorPrivacy() {
+      monAnalyticsConsent = !monAnalyticsConsent;
+      await fetch('/api/compliance/privacy-preferences', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subjectKey: monPrivKey, analyticsConsent: monAnalyticsConsent, sessionReplayConsent: false })
+      });
+      document.getElementById('monPrivState').textContent = monAnalyticsConsent ? 'Enabled (Opted In)' : 'Disabled (Default)';
     }
   </script>
 </body>

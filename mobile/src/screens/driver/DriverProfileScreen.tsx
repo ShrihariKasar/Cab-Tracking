@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AppIcon } from '../../components/AppIcon';
 import { StatusPill } from '../../components/StatusPill';
 import { Theme } from '../../config/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import {
+  getPrivacyPreferences,
+  loadPrivacyPreferences,
+  updatePrivacyPreferences,
+  type PrivacyPreferences,
+} from '../../services/analyticsGuard';
 import { api } from '../../services/api';
 import { useResponsive } from '../../utils/responsive';
 
@@ -13,6 +19,43 @@ export const DriverProfileScreen: React.FC = () => {
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [saving, setSaving] = useState(false);
+  const [privacyPrefs, setPrivacyPrefs] = useState<PrivacyPreferences>(getPrivacyPreferences());
+
+  useEffect(() => {
+    if (user?.id) {
+      loadPrivacyPreferences(user.id).then(setPrivacyPrefs);
+    }
+  }, [user?.id]);
+
+  const togglePrivacy = async (key: keyof PrivacyPreferences, value: boolean) => {
+    const next = { ...privacyPrefs, [key]: value };
+    setPrivacyPrefs(next);
+    if (user?.id) {
+      await updatePrivacyPreferences(user.id, next);
+    }
+  };
+
+  const handleWithdrawConsent = () => {
+    Alert.alert(
+      'Withdraw DPDP Consent',
+      'Withdrawing consent will suspend data processing and sign you out. Continue?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Withdraw',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.post('/compliance/consent/withdraw', {});
+              await logout();
+            } catch (err: any) {
+              Alert.alert('Error', err?.response?.data?.message || 'Unable to withdraw consent.');
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleSave = async () => {
     if (!user || !fullName.trim()) return;
@@ -89,6 +132,39 @@ export const DriverProfileScreen: React.FC = () => {
             <Text style={styles.blackBtnText}>Edit Profile</Text>
           </TouchableOpacity>
         )}
+      </View>
+
+      <View style={[styles.card, Theme.shadow.card]}>
+        <View style={styles.cardHeader}>
+          <AppIcon name="shield" size={18} color={Theme.colors.text} />
+          <Text style={styles.sectionTitle}>Privacy &amp; Consent</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Non-Essential Analytics</Text>
+          <TouchableOpacity
+            onPress={() => togglePrivacy('analyticsConsent', !privacyPrefs.analyticsConsent)}
+            style={privacyPrefs.analyticsConsent ? styles.toggleOn : styles.toggleOff}
+          >
+            <Text style={privacyPrefs.analyticsConsent ? styles.toggleTextOn : styles.toggleTextOff}>
+              {privacyPrefs.analyticsConsent ? 'ON' : 'OFF'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Session Replay</Text>
+          <TouchableOpacity
+            onPress={() => togglePrivacy('sessionReplayConsent', !privacyPrefs.sessionReplayConsent)}
+            style={privacyPrefs.sessionReplayConsent ? styles.toggleOn : styles.toggleOff}
+          >
+            <Text style={privacyPrefs.sessionReplayConsent ? styles.toggleTextOn : styles.toggleTextOff}>
+              {privacyPrefs.sessionReplayConsent ? 'ON' : 'OFF'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity onPress={handleWithdrawConsent} style={styles.secondaryBtn}>
+          <Text style={styles.secondaryBtnText}>Withdraw DPDP Consent</Text>
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity onPress={logout} style={styles.logoutBtn}>
@@ -169,6 +245,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   secondaryBtnText: { color: Theme.colors.text, fontWeight: '700', fontSize: 14 },
+  toggleOn: {
+    backgroundColor: Theme.colors.primary,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  toggleOff: {
+    backgroundColor: Theme.colors.surfaceMuted,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  toggleTextOn: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  toggleTextOff: { color: Theme.colors.textSecondary, fontWeight: '700', fontSize: 12 },
   logoutBtn: {
     width: '100%',
     minHeight: 48,
