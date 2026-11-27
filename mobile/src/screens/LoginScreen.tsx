@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -148,9 +149,11 @@ export const LoginScreen: React.FC = () => {
       >
         <View style={styles.inner}>
           <View style={styles.brandRow}>
-            <View style={styles.logoMark}>
-              <AppIcon name="car" size={24} color="#FFFFFF" />
-            </View>
+            <Image
+              source={require('../assets/playstore-icon-512.png')}
+              style={styles.logoMark}
+              accessibilityLabel="FleetPulse Logo"
+            />
             <Text style={styles.brandName}>FleetPulse</Text>
           </View>
 

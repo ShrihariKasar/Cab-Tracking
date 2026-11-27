@@ -38,35 +38,27 @@ Corporate cab live GPS tracking application built with **React Native + TypeScri
 | :---: | :---: |
 | <img src="screenshots/live-field-test-monitor.jpg" width="460" alt="Live Field Test Admin Monitor" /> | <img src="screenshots/live-route-osrm-monitor.jpg" width="460" alt="Live Admin Monitor Road-Following Route" /> |
 
-## Updated Mobile App Screenshots
+## Mobile App Screenshots (`375×812`)
 
-| Place Search & Route Selection | Active Ride Live GPS Sharing | Driver Profile, Vehicle Edit & Privacy Controls |
+### Authentication & Driver App
+
+| Login & Registration | Distance-Ranked Place Search | Active Ride (Start to End + Live Vehicle) |
 | :---: | :---: | :---: |
-| <img src="screenshots/mobile-place-search-updated.png" width="240" alt="Updated Place Search" /> | <img src="screenshots/mobile-active-ride-updated.jpg" width="240" alt="Updated Active Ride Screen" /> | <img src="screenshots/mobile-profile-privacy-updated.jpg" width="240" alt="Updated Driver Profile and Privacy" /> |
+| <img src="screenshots/mobile-login-updated.png" width="240" alt="Updated Login Screen" /> | <img src="screenshots/mobile-driver-search-updated.png" width="240" alt="Updated Place Search with Distance" /> | <img src="screenshots/mobile-active-ride-start-to-end.png" width="240" alt="Updated Active Ride Start to End with Live Vehicle" /> |
 
-## Mobile App Screenshots
+| Driver Profile, Vehicle Edit & Ride History |
+| :---: |
+| <img src="screenshots/mobile-profile-privacy-updated.jpg" width="240" alt="Updated Driver Profile, Vehicle Edit and Privacy" /> |
 
-### Authentication & Driver App (`375×812`)
-
-| Login | Driver Home & Map | Driver Profile |
-| :---: | :---: | :---: |
-| <img src="screenshots/login.png" width="240" alt="Login Screen" /> | <img src="screenshots/driver-dashboard.png" width="240" alt="Driver Dashboard" /> | <img src="screenshots/driver-profile.png" width="240" alt="Driver Profile" /> |
-
-### Admin Fleet & Live Tracking (`375×812`)
+### Admin Fleet & Live Tracking
 
 | Fleet & Driver List | Active Rides | Driver Details |
 | :---: | :---: | :---: |
 | <img src="screenshots/admin-drivers.png" width="240" alt="Admin Drivers" /> | <img src="screenshots/admin-active-rides.png" width="240" alt="Admin Active Rides" /> | <img src="screenshots/admin-driver-details.png" width="240" alt="Admin Driver Details" /> |
 
-| Live Tracking Map | Admin Profile |
+| Admin Live Map (Start to End + Moving Cab) | Admin Profile |
 | :---: | :---: |
-| <img src="screenshots/admin-live-map.png" width="240" alt="Admin Live Map" /> | <img src="screenshots/admin-profile.png" width="240" alt="Admin Profile" /> |
-
-### Small-Device Responsive Verification (`320×568`)
-
-| Driver Home (`320×568`) | Fleet List (`320×568`) | Live Map (`320×568`) |
-| :---: | :---: | :---: |
-| <img src="screenshots/driver-dashboard-320x568.png" width="210" alt="Driver Dashboard 320x568" /> | <img src="screenshots/admin-drivers-320x568.png" width="210" alt="Admin Drivers 320x568" /> | <img src="screenshots/admin-live-map-320x568.png" width="210" alt="Admin Live Map 320x568" /> |
+| <img src="screenshots/mobile-admin-live-map-updated.png" width="240" alt="Updated Admin Live Map Start to End" /> | <img src="screenshots/admin-profile.png" width="240" alt="Admin Profile" /> |
 
 ## Documentation
 
